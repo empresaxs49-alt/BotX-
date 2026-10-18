@@ -7,8 +7,9 @@
   <title>X$</title>
   <link rel="icon" href="/favicon.ico?v=1" sizes="16x16 32x32 48x48">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=1">
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/dashboard.js" defer></script>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetVersion %>">
+  <script src="/js/dashboard.js?v=<%= assetVersion %>" defer></script>
+  <script src="/js/embed-editor.js?v=<%= assetVersion %>" defer></script>
 </head>
 <body class="app-page">
   <div class="app-background" aria-hidden="true">
@@ -32,8 +33,8 @@
     <nav class="sidebar-nav" aria-label="Panel de control">
       <p class="nav-caption">General</p>
       <button class="nav-link is-active" type="button" data-section-target="overview"><span>⌂</span> Resumen</button>
-      <button class="nav-link" type="button" data-section-target="embeds"><span>✦</span> Mensajes y embeds</button>
-      <button class="nav-link" type="button" data-section-target="composer"><span>✎</span> Editor personalizado</button>
+      <button class="nav-link" type="button" data-section-target="embeds"><span>✦</span> Enviar embeds</button>
+      <button class="nav-link" type="button" data-section-target="composer"><span>✎</span> Editor de embeds</button>
 
       <p class="nav-caption">Comunidad</p>
       <button class="nav-link" type="button" data-section-target="tickets"><span>◫</span> Tickets <b class="nav-count" data-ticket-count><%= overview.ticketCount || 0 %></b></button>
@@ -66,7 +67,7 @@
     <div class="toast-stack" aria-live="polite" aria-atomic="true" data-toast-stack></div>
 
     <div class="content-shell">
-      <!-- Resumen -->
+      <!-- ═══ Resumen ═══ -->
       <section class="panel-section is-visible" data-section="overview" id="overview">
         <div class="hero-card">
           <img src="/assets/banner.gif" class="hero-card__banner" alt="">
@@ -76,7 +77,7 @@
             <h1>Todo tu servidor,<br><em>en un solo panel.</em></h1>
             <p>Administra mensajes, soporte, protección y presencia sin salir del navegador.</p>
             <div class="hero-card__actions">
-              <button class="button button--primary" type="button" data-go="embeds">Enviar un embed <span>→</span></button>
+              <button class="button button--primary" type="button" data-go="composer">Crear un embed <span>→</span></button>
               <button class="button button--ghost" type="button" data-go="voice">Controlar voz</button>
             </div>
           </div>
@@ -116,142 +117,183 @@
         </div>
       </section>
 
-      <!-- Embeds predefinidos -->
+      <!-- ═══ Enviar embeds (plantillas) ═══ -->
       <section class="panel-section" data-section="embeds" id="embeds">
-        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Mensajes y embeds</h1><p>Envía o edita los paneles predefinidos del servidor.</p></div></div>
+        <div class="section-head">
+          <div><span class="eyebrow">COMUNICACIÓN</span><h1>Enviar embeds</h1><p>Manda una plantilla lista a un canal. Para cambiar su contenido usa el editor.</p></div>
+          <div class="section-head__actions"><button class="button button--ghost" type="button" data-go="composer">✎ Abrir editor</button></div>
+        </div>
         <article class="surface-card">
           <label class="field field--wide"><span>Canal de destino</span><select data-embed-channel><option value="">Selecciona un canal de texto</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
           <div class="template-grid">
-            <button class="template-card" type="button" data-send-template="tickets"><span>🎫</span><b>Tickets</b><small>Panel de soporte con botones</small></button>
+            <button class="template-card" type="button" data-send-template="tickets"><span>🎫</span><b>Tickets</b><small>Panel con 3 botones</small></button>
             <button class="template-card" type="button" data-send-template="boosts"><span>🚀</span><b>Beneficios</b><small>Boosts y premios</small></button>
             <button class="template-card" type="button" data-send-template="panelpremium"><span>💎</span><b>Panel Premium</b><small>Catálogo completo</small></button>
             <button class="template-card" type="button" data-send-template="panelbasico"><span>📦</span><b>Panel Básico</b><small>Funciones básicas</small></button>
             <button class="template-card" type="button" data-send-template="dripclient"><span>🟣</span><b>Drip Client</b><small>Client exclusivo</small></button>
           </div>
         </article>
-
-        <!-- Editor rápido de predefinidos -->
-        <article class="surface-card" style="margin-top:16px">
-          <div class="surface-card__head"><div><span class="eyebrow">EDITOR RÁPIDO</span><h2>Editar embed predefinido</h2></div></div>
-          <p class="field-hint">Selecciona, edita y guarda. Emojis <code>&lt;a:nombre:id&gt;</code> funcionan en título y descripción.</p>
-          <div style="display:grid;gap:14px;margin-top:14px;">
-            <label class="field"><span>Embed</span><select data-tpl-select><option value="">—</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Premium</option><option value="panelbasico">📦 Básico</option><option value="dripclient">🟣 Drip</option></select></label>
-            <label class="field"><span>Título</span><input data-tpl-title maxlength="256"></label>
-            <label class="field"><span>Descripción</span><textarea data-tpl-desc maxlength="4096" rows="5"></textarea></label>
-            <div class="form-row"><label class="field"><span>Color</span><input data-tpl-color maxlength="7" placeholder="#2b2d31"></label><label class="field"><span>Footer</span><input data-tpl-footer maxlength="2048"></label></div>
-            <div class="form-row"><label class="field"><span>Footer icono</span><input data-tpl-footer-icon maxlength="2048"></label><label class="field"><span>Thumbnail</span><input data-tpl-thumbnail maxlength="2048"></label></div>
-            <label class="field"><span>Imagen</span><input data-tpl-image maxlength="2048"></label>
-            <div class="button-row"><button class="button button--primary" type="button" data-tpl-save>💾 Guardar</button><button class="button button--ghost" type="button" data-tpl-reset>↺ Recargar</button></div>
-          </div>
-        </article>
       </section>
 
-      <!-- ══ EDITOR DE EMBEDS CON PESTAÑAS ══════════════════════ -->
+      <!-- ═══ Editor de embeds ═══ -->
       <section class="panel-section" data-section="composer" id="composer">
-        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor de Embeds</h1><p>Construye un embed completo con preview en tiempo real.</p></div></div>
-
-        <div class="editor-topbar">
-          <label class="field"><span>🔖 PLANTILLA BASE</span><select data-ed-base><option value="">— Embed en blanco —</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Premium</option><option value="panelbasico">📦 Básico</option><option value="dripclient">🟣 Drip</option></select></label>
-          <label class="field"><span>▶ CANAL DESTINO</span><select data-composer-channel required><option value="">Selecciona canal…</option><% overview.textChannels.forEach((ch) => { %><option value="<%= ch.id %>"># <%= ch.name %></option><% }) %></select></label>
-          <div class="editor-topbar__info"><span class="char-counter" data-ed-chars>Caracteres: 0 / 6000</span><button class="button button--primary" type="button" data-ed-send>📨 Enviar Embed</button></div>
+        <div class="section-head">
+          <div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor de embeds</h1><p>Carga una plantilla o empieza en blanco. La vista previa se actualiza mientras escribes.</p></div>
         </div>
 
-        <article class="surface-card editor-card">
-          <nav class="ed-tabs" role="tablist">
-            <button class="ed-tab is-active" type="button" data-ed-tab="author">👤 Autor</button>
-            <button class="ed-tab" type="button" data-ed-tab="content">📄 Contenido</button>
-            <button class="ed-tab" type="button" data-ed-tab="fields">📊 Campos</button>
-            <button class="ed-tab" type="button" data-ed-tab="media">🖼 Media</button>
-            <button class="ed-tab" type="button" data-ed-tab="footer">⌊ Footer</button>
-            <button class="ed-tab" type="button" data-ed-tab="style">🎨 Estilo</button>
-            <button class="ed-tab" type="button" data-ed-tab="button">⚫ Botón</button>
-          </nav>
-
-          <div class="ed-pane is-visible" data-ed-pane="author">
-            <div class="form-row"><label class="field"><span>EMOJI DEL AUTOR</span><input data-ed-author-emoji placeholder="🎫 o <a:nombre:ID>" maxlength="64"><p class="field-hint">🎫 normal, <code>&lt;:n:ID&gt;</code> estático, <code>&lt;a:n:ID&gt;</code> animado</p></label><label class="field"><span>NOMBRE DEL AUTOR</span><input data-ed-author-name maxlength="256" placeholder="x$"><span class="input-counter" data-count-for="ed-author-name">0/256</span></label></div>
-            <label class="field"><span>URL DEL AUTOR (OPCIONAL)</span><input data-ed-author-url placeholder="https://..." maxlength="2048"><p class="field-hint">El nombre se vuelve clickeable</p></label>
-            <label class="field"><span>URL DEL ÍCONO DEL AUTOR</span><input data-ed-author-icon placeholder="https://i.imgur.com/..." maxlength="2048"><p class="field-hint">Imagen pequeña a la izquierda del nombre</p></label>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="content">
-            <label class="field"><span>TÍTULO</span><input data-ed-title placeholder="Título del embed..." maxlength="256"><span class="input-counter" data-count-for="ed-title">0/256</span></label>
-            <label class="field"><span>URL DEL TÍTULO</span><input data-ed-title-url placeholder="https://... (clickeable)" maxlength="2048"></label>
-            <label class="field"><span>DESCRIPCIÓN</span><textarea data-ed-description rows="7" maxlength="4096" placeholder="Soporta **negrita**, *cursiva*, __subrayado__, ~~tachado~~&#10;y saltos de línea&#10;Usa <a:nombre:ID> para emojis de servidor"></textarea><span class="input-counter" data-count-for="ed-description">0/4096</span></label>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="fields">
-            <div class="ed-fields-list" data-ed-fields></div>
-            <button class="button button--ghost" type="button" data-ed-add-field style="width:100%">+ Agregar Campo (<span data-ed-field-count>0</span>/25)</button>
-            <p class="field-hint" style="text-align:center;margin-top:8px">Inline = 3 por fila. Bloque = fila completa. Máx 25 campos.</p>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="media">
-            <label class="field"><span>🖼 IMAGEN PRINCIPAL</span><input data-ed-image placeholder="https://i.imgur.com/..." maxlength="2048"><p class="field-hint">Aparece debajo de la descripción (PNG, JPG, GIF, WEBP)</p></label>
-            <label class="field"><span>🖼 THUMBNAIL (MINIATURA)</span><input data-ed-thumbnail placeholder="https://..." maxlength="2048"><p class="field-hint">Esquina superior derecha del embed</p></label>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="footer">
-            <label class="field"><span>TEXTO DEL FOOTER</span><input data-ed-footer placeholder="» x$" maxlength="2048"><span class="input-counter" data-count-for="ed-footer">0/2048</span></label>
-            <label class="field"><span>URL DEL ÍCONO DEL FOOTER</span><input data-ed-footer-icon placeholder="https://..." maxlength="2048"><p class="field-hint">Imagen circular a la izquierda del footer</p></label>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="style">
-            <span class="field" style="gap:10px"><span>COLOR DE LA BARRA LATERAL</span>
-              <div class="color-swatches" data-ed-swatches>
-                <button type="button" class="swatch" style="background:#5865F2" data-swatch="#5865F2"></button>
-                <button type="button" class="swatch" style="background:#7b2fff" data-swatch="#7b2fff"></button>
-                <button type="button" class="swatch" style="background:#EB459E" data-swatch="#EB459E"></button>
-                <button type="button" class="swatch" style="background:#00ff88" data-swatch="#00ff88"></button>
-                <button type="button" class="swatch" style="background:#57F287" data-swatch="#57F287"></button>
-                <button type="button" class="swatch" style="background:#FEE75C" data-swatch="#FEE75C"></button>
-                <button type="button" class="swatch" style="background:#F47B67" data-swatch="#F47B67"></button>
-                <button type="button" class="swatch" style="background:#ED4245" data-swatch="#ED4245"></button>
-                <button type="button" class="swatch" style="background:#E67E22" data-swatch="#E67E22"></button>
-                <button type="button" class="swatch" style="background:#23272A" data-swatch="#23272A"></button>
-                <button type="button" class="swatch" style="background:#FF3CAC" data-swatch="#FF3CAC"></button>
-                <button type="button" class="swatch" style="background:#2b2d31" data-swatch="#2b2d31"></button>
-              </div>
-              <div class="color-input-row"><span style="color:var(--muted);font-size:.72rem">HEX:</span><input data-ed-color value="#00ff88" maxlength="7" class="color-hex-input"><span class="color-preview-box" data-ed-color-preview style="background:#00ff88"></span></div>
-            </span>
-          </div>
-
-          <div class="ed-pane" data-ed-pane="button">
-            <label class="field"><span>TIPO DE COMPONENTE</span><select data-ed-btn-type><option value="">Sin componente</option><option value="ticket">Botón de ticket</option><option value="link">Botón de enlace (URL)</option></select></label>
-            <label class="field"><span>ESTILO DEL BOTÓN</span><select data-ed-btn-style><option value="Primary">Primary (Azul)</option><option value="Success">Success (Verde)</option><option value="Danger">Danger (Rojo)</option><option value="Secondary">Secondary (Gris)</option></select></label>
-            <div class="form-row"><label class="field"><span>Texto</span><input data-ed-btn-label placeholder="Abrir ticket" maxlength="80"></label><label class="field"><span>Emoji</span><input data-ed-btn-emoji placeholder="🎫" maxlength="64"></label></div>
-            <label class="field" data-ed-btn-url-wrap style="display:none"><span>URL</span><input data-ed-btn-url placeholder="https://..." maxlength="2048"></label>
+        <!-- Barra de acciones -->
+        <article class="surface-card ed-toolbar">
+          <label class="field"><span>Plantilla base</span>
+            <select data-ed-base>
+              <option value="">— Embed en blanco —</option>
+              <option value="tickets">🎫 Tickets</option>
+              <option value="boosts">🚀 Beneficios</option>
+              <option value="panelpremium">💎 Panel Premium</option>
+              <option value="panelbasico">📦 Panel Básico</option>
+              <option value="dripclient">🟣 Drip Client</option>
+            </select>
+          </label>
+          <label class="field"><span>Canal de destino</span>
+            <select data-composer-channel>
+              <option value="">Selecciona un canal…</option>
+              <% overview.textChannels.forEach((ch) => { %><option value="<%= ch.id %>"># <%= ch.name %></option><% }) %>
+            </select>
+          </label>
+          <div class="ed-toolbar__actions">
+            <span class="char-counter" data-ed-chars>0 / 6000</span>
+            <button class="button button--ghost" type="button" data-ed-save disabled title="Selecciona una plantilla base para guardar los cambios en ella">💾 Guardar plantilla</button>
+            <button class="button button--primary" type="button" data-ed-send>📨 Enviar embed</button>
           </div>
         </article>
 
-        <!-- Preview en tiempo real -->
-        <article class="surface-card" style="margin-top:16px">
-          <div class="surface-card__head"><div><span class="eyebrow">👁 Preview en tiempo real</span></div><span class="tag-sim">Simulado</span></div>
-          <div class="discord-msg-preview">
-            <div class="discord-msg-avatar"><img src="/assets/logo.gif" alt=""></div>
-            <div class="discord-msg-body">
-              <div class="discord-msg-header"><strong><%= overview.botTag.split('#')[0] || 'x$' %></strong><span class="discord-msg-badge">APP</span><span class="discord-msg-time">Hoy <%= new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) %></span></div>
-              <div class="discord-embed" data-ed-preview>
-                <div class="discord-embed__bar" data-ed-pv-color style="background:#00ff88"></div>
-                <div class="discord-embed__main">
-                  <div class="discord-embed__body">
-                    <div class="discord-embed__author" data-ed-pv-author style="display:none"><img data-ed-pv-author-icon alt="" style="display:none"><span data-ed-pv-author-name></span></div>
-                    <strong class="discord-embed__title" data-ed-pv-title></strong>
-                    <div class="discord-embed__desc" data-ed-pv-desc>El contenido aparecerá aquí…</div>
-                    <div class="discord-embed__fields" data-ed-pv-fields></div>
-                  </div>
-                  <img class="discord-embed__thumb" data-ed-pv-thumb alt="" style="display:none">
-                </div>
-                <img class="discord-embed__image" data-ed-pv-image alt="" style="display:none">
-                <div class="discord-embed__footer-row" data-ed-pv-footer-row style="display:none"><img data-ed-pv-footer-icon alt="" style="display:none"><span data-ed-pv-footer></span></div>
-              </div>
-              <div class="discord-msg-btns" data-ed-pv-buttons></div>
+        <div class="editor-layout">
+          <!-- Columna izquierda: editor con pestañas -->
+          <article class="surface-card editor-card">
+            <nav class="ed-tabs" role="tablist" aria-label="Secciones del embed">
+              <button class="ed-tab is-active" type="button" role="tab" data-ed-tab="content">📄 Contenido</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="author">👤 Autor</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="fields">📊 Campos</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="media">🖼 Media</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="footer">⌊ Footer</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="style">🎨 Estilo</button>
+              <button class="ed-tab" type="button" role="tab" data-ed-tab="button">⚫ Botón</button>
+            </nav>
+
+            <div class="ed-pane is-visible" data-ed-pane="content">
+              <label class="field"><span>Título</span><input data-ed-title maxlength="256" placeholder="Título del embed"><em class="input-counter" data-count="ed-title">0/256</em></label>
+              <label class="field"><span>URL del título (opcional)</span><input data-ed-title-url maxlength="2048" placeholder="https://… (vuelve el título clickeable)"></label>
+              <label class="field"><span>Descripción</span><textarea data-ed-description rows="9" maxlength="4096" placeholder="Escribe aquí…&#10;**negrita**  *cursiva*  __subrayado__  ~~tachado~~&#10;Emojis del servidor: :nombre:  o elige uno del panel →"></textarea><em class="input-counter" data-count="ed-description">0/4096</em></label>
+              <p class="field-hint">💡 Escribe <code>:nombre:</code> y el bot lo convierte al emoji real del servidor. También puedes pegar <code>&lt;a:nombre:ID&gt;</code> o usar el selector de emojis.</p>
             </div>
-          </div>
-          <p class="field-hint" style="text-align:center;margin-top:10px">⚠ Vista previa aproximada — el resultado real puede variar</p>
-        </article>
+
+            <div class="ed-pane" data-ed-pane="author">
+              <div class="form-row">
+                <label class="field"><span>Emoji del autor</span><input data-ed-author-emoji maxlength="16" placeholder="🎫"></label>
+                <label class="field"><span>Nombre del autor</span><input data-ed-author-name maxlength="256" placeholder="x$"><em class="input-counter" data-count="ed-author-name">0/256</em></label>
+              </div>
+              <label class="field"><span>URL del autor (opcional)</span><input data-ed-author-url maxlength="2048" placeholder="https://… (el nombre se vuelve un enlace)"></label>
+              <label class="field"><span>URL del ícono del autor</span><input data-ed-author-icon maxlength="2048" placeholder="https://…"></label>
+              <p class="field-hint">Discord solo muestra emojis normales (Unicode) en el autor y el footer. Los emojis de servidor funcionan en título, descripción y campos.</p>
+            </div>
+
+            <div class="ed-pane" data-ed-pane="fields">
+              <div class="ed-fields-list" data-ed-fields></div>
+              <button class="button button--ghost" type="button" data-ed-add-field>+ Agregar campo (<span data-ed-field-count>0</span>/25)</button>
+              <p class="field-hint">Inline = hasta 3 por fila. Sin inline = fila completa.</p>
+            </div>
+
+            <div class="ed-pane" data-ed-pane="media">
+              <label class="field"><span>Imagen principal</span><input data-ed-image maxlength="2048" placeholder="https://…"></label>
+              <label class="field"><span>Thumbnail (miniatura)</span><input data-ed-thumbnail maxlength="2048" placeholder="https://…"></label>
+              <p class="field-hint">La imagen principal va debajo de la descripción; el thumbnail, arriba a la derecha. Acepta PNG, JPG, GIF y WEBP con enlace público. Tus imágenes propias: <code>/assets/banner.gif</code> y <code>/assets/logo.gif</code> de este panel.</p>
+            </div>
+
+            <div class="ed-pane" data-ed-pane="footer">
+              <label class="field"><span>Texto del footer</span><input data-ed-footer maxlength="2048" placeholder="Copyright © 2026 | x$"><em class="input-counter" data-count="ed-footer">0/2048</em></label>
+              <label class="field"><span>URL del ícono del footer</span><input data-ed-footer-icon maxlength="2048" placeholder="https://…"></label>
+            </div>
+
+            <div class="ed-pane" data-ed-pane="style">
+              <div class="field"><span>Color de la barra lateral</span>
+                <div class="color-swatches" data-ed-swatches>
+                  <% ['#00ff88','#57F287','#5865F2','#7b2fff','#EB459E','#ED4245','#E67E22','#FEE75C','#2b2d31','#ffffff'].forEach((c) => { %><button type="button" class="swatch" data-swatch="<%= c %>" aria-label="Color <%= c %>"></button><% }) %>
+                </div>
+              </div>
+              <div class="color-input-row">
+                <input type="color" data-ed-color-picker value="#00ff88" aria-label="Selector de color">
+                <input class="color-hex-input" data-ed-color value="#00ff88" maxlength="7" placeholder="#00ff88" aria-label="Color hexadecimal">
+              </div>
+            </div>
+
+            <div class="ed-pane" data-ed-pane="button">
+              <label class="field"><span>Tipo de botón</span>
+                <select data-ed-btn-type>
+                  <option value="">Sin botón</option>
+                  <option value="ticket">Abrir ticket</option>
+                  <option value="link">Enlace (URL)</option>
+                </select>
+              </label>
+              <div class="form-row">
+                <label class="field"><span>Texto</span><input data-ed-btn-label maxlength="80" placeholder="Abrir ticket"></label>
+                <label class="field"><span>Emoji</span><input data-ed-btn-emoji maxlength="64" placeholder="🎫 o :nombre:"></label>
+              </div>
+              <label class="field"><span>Estilo</span>
+                <select data-ed-btn-style>
+                  <option value="Primary">Azul (Primary)</option>
+                  <option value="Success">Verde (Success)</option>
+                  <option value="Danger">Rojo (Danger)</option>
+                  <option value="Secondary">Gris (Secondary)</option>
+                </select>
+              </label>
+              <label class="field" data-ed-btn-url-wrap hidden><span>URL del enlace</span><input data-ed-btn-url maxlength="2048" placeholder="https://…"></label>
+            </div>
+          </article>
+
+          <!-- Columna derecha: preview + emojis (fija al hacer scroll) -->
+          <aside class="editor-side">
+            <article class="surface-card preview-card">
+              <div class="surface-card__head"><div><span class="eyebrow">VISTA PREVIA</span></div><span class="tag-sim">Simulado</span></div>
+              <div class="discord-msg-preview">
+                <div class="discord-msg-avatar"><img src="/assets/logo.gif" alt=""></div>
+                <div class="discord-msg-body">
+                  <div class="discord-msg-header"><strong><%= (overview.botTag || 'x$').split('#')[0] %></strong><span class="discord-msg-badge">APP</span></div>
+                  <div class="discord-embed">
+                    <div class="discord-embed__bar" data-ed-pv-color></div>
+                    <div class="discord-embed__inner">
+                      <div class="discord-embed__main">
+                        <div class="discord-embed__body">
+                          <div class="discord-embed__author" data-ed-pv-author hidden><img data-ed-pv-author-icon alt="" hidden><span data-ed-pv-author-name></span></div>
+                          <div class="discord-embed__title" data-ed-pv-title hidden></div>
+                          <div class="discord-embed__desc" data-ed-pv-desc></div>
+                          <div class="discord-embed__fields" data-ed-pv-fields></div>
+                        </div>
+                        <img class="discord-embed__thumb" data-ed-pv-thumb alt="" hidden>
+                      </div>
+                      <img class="discord-embed__image" data-ed-pv-image alt="" hidden>
+                      <div class="discord-embed__footer-row" data-ed-pv-footer-row hidden><img data-ed-pv-footer-icon alt="" hidden><span data-ed-pv-footer></span></div>
+                    </div>
+                  </div>
+                  <div class="discord-msg-btns" data-ed-pv-buttons></div>
+                </div>
+              </div>
+              <p class="field-hint preview-note">Vista aproximada: el resultado en Discord puede variar un poco.</p>
+            </article>
+
+            <article class="surface-card emoji-card">
+              <div class="surface-card__head"><div><span class="eyebrow">EMOJIS</span><h2>Insertar emoji</h2></div></div>
+              <div class="emoji-tabs">
+                <button type="button" class="emoji-tab is-active" data-emoji-tab="server">Del servidor <b data-emoji-count>0</b></button>
+                <button type="button" class="emoji-tab" data-emoji-tab="common">Comunes</button>
+              </div>
+              <input class="emoji-search" data-emoji-search type="search" placeholder="Buscar emoji…" aria-label="Buscar emoji">
+              <div class="emoji-grid" data-emoji-grid><p class="empty-state">Cargando emojis…</p></div>
+              <p class="field-hint">Haz clic en un campo de texto y luego en un emoji para insertarlo en ese punto.</p>
+            </article>
+          </aside>
+        </div>
       </section>
 
-      <!-- Tickets -->
+      <!-- ═══ Tickets ═══ -->
       <section class="panel-section" data-section="tickets" id="tickets">
         <div class="section-head"><div><span class="eyebrow">SOPORTE</span><h1>Tickets activos</h1><p>Visualiza y cierra los canales de soporte que siguen abiertos.</p></div><div class="section-head__actions"><button class="button button--ghost" type="button" data-refresh-tickets>Actualizar</button><button class="button button--primary" type="button" data-go="embeds">Crear panel</button></div></div>
         <article class="surface-card table-card">
@@ -259,7 +301,7 @@
         </article>
       </section>
 
-      <!-- Seguridad -->
+      <!-- ═══ Seguridad ═══ -->
       <section class="panel-section" data-section="security" id="security">
         <div class="section-head"><div><span class="eyebrow">MODERACIÓN</span><h1>Seguridad</h1><p>Los interruptores actualizan el comportamiento real del bot durante esta sesión.</p></div></div>
         <article class="surface-card"><div class="security-grid">
@@ -270,30 +312,41 @@
         </div></article>
       </section>
 
-      <!-- Voz -->
+      <!-- ═══ Voz ═══ -->
       <section class="panel-section" data-section="voice" id="voice">
-        <div class="section-head"><div><span class="eyebrow">CONEXIÓN</span><h1>Bot en voz</h1><p>Conecta el bot a un canal; no reproduce audio ni requiere códecs Opus nativos.</p></div></div>
-        <article class="surface-card voice-card"><div><span class="voice-state" data-voice-state><i></i><span><%= overview.voice?.connected ? 'Conectado' : 'Desconectado' %></span></span><h2 data-voice-name><%= overview.voice?.channelName || 'Sin canal seleccionado' %></h2><p>El bot permanece silenciado y ensordecido al conectarse.</p></div><div class="voice-card__controls"><label class="field"><span>Canal de voz</span><select data-voice-channel><option value="">Selecciona un canal</option><% overview.voiceChannels.forEach((channel) => { %><option value="<%= channel.id %>">◖ <%= channel.name %></option><% }) %></select></label><div class="button-row"><button class="button button--primary" type="button" data-voice-connect>Conectar</button><button class="button button--danger" type="button" data-voice-disconnect>Desconectar</button></div></div></article>
+        <div class="section-head"><div><span class="eyebrow">CONEXIÓN</span><h1>Bot en voz</h1><p>Conecta el bot a un canal y se mantiene ahí (con reintento automático si Discord lo desconecta).</p></div></div>
+        <article class="surface-card voice-card">
+          <div>
+            <span class="voice-state" data-voice-state><i></i><span><%= overview.voice?.connected ? 'Conectado' : 'Desconectado' %></span></span>
+            <h2 data-voice-name><%= overview.voice?.channelName || 'Sin canal seleccionado' %></h2>
+            <p>El bot entra silenciado y ensordecido, con cifrado DAVE (obligatorio en Discord).</p>
+            <p class="voice-error" data-voice-error hidden></p>
+          </div>
+          <div class="voice-card__controls">
+            <label class="field"><span>Canal de voz</span><select data-voice-channel><option value="">Selecciona un canal</option><% overview.voiceChannels.forEach((channel) => { %><option value="<%= channel.id %>">◖ <%= channel.name %></option><% }) %></select></label>
+            <div class="button-row"><button class="button button--primary" type="button" data-voice-connect>Conectar</button><button class="button button--danger" type="button" data-voice-disconnect>Desconectar</button></div>
+          </div>
+        </article>
       </section>
 
-      <!-- Presencia -->
+      <!-- ═══ Presencia ═══ -->
       <section class="panel-section" data-section="presence" id="presence">
         <div class="section-head"><div><span class="eyebrow">IDENTIDAD</span><h1>Presencia del bot</h1><p>Actualiza el estado que aparece debajo del nombre del bot en Discord.</p></div></div>
         <article class="surface-card"><form class="presence-form" data-presence-form><label class="field"><span>Estado</span><select data-presence-status><option value="online">🟢 En línea</option><option value="idle">🌙 Ausente</option><option value="dnd">⛔ No molestar</option><option value="invisible">⚫ Invisible</option></select></label><label class="field field--grow"><span>Actividad</span><input data-presence-activity maxlength="128" value="X$ • Panel y soporte" placeholder="Ej. X$ • Panel y soporte"></label><button class="button button--primary" type="submit">Guardar presencia</button></form></article>
       </section>
 
-      <!-- Actividad -->
+      <!-- ═══ Actividad ═══ -->
       <section class="panel-section" data-section="activity" id="activity">
         <div class="section-head"><div><span class="eyebrow">AUDITORÍA</span><h1>Actividad del sistema</h1><p>Eventos reales registrados desde el inicio del proceso actual.</p></div><div class="section-head__actions"><button class="button button--ghost" type="button" data-refresh-logs>Actualizar</button><button class="button button--danger" type="button" data-clear-logs>Limpiar</button></div></div>
         <article class="surface-card"><div class="activity-list" data-activity-list><p class="empty-state">Cargando actividad…</p></div></article>
       </section>
 
-      <!-- Configuración -->
+      <!-- ═══ Configuración ═══ -->
       <section class="panel-section" data-section="settings" id="settings">
-        <div class="section-head"><div><span class="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado del despliegue, exportación segura y recomendaciones de Railway.</p></div></div>
+        <div class="section-head"><div><span class="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado del despliegue y exportación segura.</p></div></div>
         <div class="two-column">
           <article class="surface-card settings-card"><span class="settings-card__icon">⬇</span><h2>Exportar configuración</h2><p>Descarga los límites y módulos activos. No incluye tokens, credenciales ni secretos.</p><a class="button button--outline" href="/api/settings/export">Descargar JSON</a></article>
-          <article class="surface-card settings-card"><span class="settings-card__icon">✓</span><h2>Checklist Railway</h2><ul class="check-list"><li>Node 20 fijado con <code>.nvmrc</code></li><li>Healthcheck disponible en <code>/health</code></li><li>Sin dependencias Opus nativas</li><li>Variables y sesión protegidas por entorno</li></ul></article>
+          <article class="surface-card settings-card"><span class="settings-card__icon">✓</span><h2>Checklist Railway</h2><ul class="check-list"><li>Node 22 con cifrado DAVE para voz</li><li>Healthcheck disponible en <code>/health</code></li><li>Sin dependencias Opus nativas</li><li>CSS y JS versionados por deploy</li></ul></article>
         </div>
         <article class="notice notice--info">ℹ Para que anti-spam y anti-raid funcionen, habilita <b>Message Content Intent</b> y <b>Server Members Intent</b> en Discord Developer Portal, además de conceder permisos de moderación al bot.</article>
       </section>

@@ -45,12 +45,21 @@ function createWebApp(bot) {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data: https://cdn.discordapp.com https://media.discordapp.net https://*.discord.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none';",
+      "default-src 'self'; img-src 'self' data: https:; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none';",
     );
     next();
   });
 
-  app.use(express.static(path.join(__dirname, 'public'), { maxAge: production ? '1h' : 0 }));
+  // Versión de los assets: cambia en cada deploy y fuerza al navegador a bajar el CSS/JS nuevo.
+  app.locals.assetVersion = (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 8) || Date.now().toString(36);
+
+  app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: production ? '1h' : 0,
+    setHeaders(res, filePath) {
+      // CSS y JS siempre se revalidan (ETag); así un deploy nunca se ve con estilos viejos.
+      if (/\.(css|js)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    },
+  }));
   app.get('/assets/banner.gif', (req, res) => res.sendFile(path.join(PROJECT_ROOT, 'DKTl8K1.gif')));
   app.get('/assets/logo.gif', (req, res) => res.sendFile(path.join(PROJECT_ROOT, 'gif_1.gif')));
   app.use(express.urlencoded({ extended: false, limit: '16kb' }));
@@ -159,6 +168,10 @@ function createWebApp(bot) {
     res.json({ ok: true, ...bot.getOverview() });
   });
 
+  app.get('/api/emojis', requireAuth, (req, res) => {
+    res.json({ ok: true, emojis: bot.getEmojiList() });
+  });
+
   app.get('/api/logs', requireAuth, (req, res) => {
     res.json({ ok: true, logs: bot.getLogs() });
   });
@@ -214,6 +227,7 @@ function createWebApp(bot) {
     if (typeof data.color === 'string' && /^#?[0-9a-fA-F]{6}$/.test(data.color.trim())) {
       data.color = Number.parseInt(data.color.trim().replace('#', ''), 16);
     }
+    if (typeof data.footer === 'string') data.footer = { text: data.footer, iconURL: null };
     const result = bot.updateEmbedTemplate(type, data);
     res.status(result.ok ? 200 : 400).json(result);
   });
@@ -222,11 +236,23 @@ function createWebApp(bot) {
     const title = String(req.body.title || '').trim().slice(0, 256);
     const description = String(req.body.description || '').trim().slice(0, 4_096);
     const footer = String(req.body.footer || '').trim().slice(0, 2_048);
-    const footerIcon = String(req.body.footerIcon || '').trim().slice(0, 2_048) || undefined;
-    const image = String(req.body.image || '').trim().slice(0, 2_048) || undefined;
-    const thumbnail = String(req.body.thumbnail || '').trim().slice(0, 2_048) || undefined;
     const authorName = String(req.body.authorName || '').trim().slice(0, 256) || undefined;
-    const authorIcon = String(req.body.authorIcon || '').trim().slice(0, 2_048) || undefined;
+
+    // Discord rechaza TODO el mensaje si una URL es inválida, así que se validan antes de enviar.
+    const urls = {};
+    const urlLabels = {
+      titleUrl: 'URL del título', authorUrl: 'URL del autor', authorIcon: 'URL del ícono del autor',
+      footerIcon: 'URL del ícono del footer', image: 'URL de la imagen principal', thumbnail: 'URL del thumbnail',
+    };
+    for (const [key, label] of Object.entries(urlLabels)) {
+      const raw = String(req.body[key] || '').trim();
+      if (!raw) continue;
+      if (raw.length > 2_048 || !/^https?:\/\/[^\s]+$/i.test(raw)) {
+        return res.status(400).json({ ok: false, message: `${label} no es válida: debe empezar con http:// o https://.` });
+      }
+      urls[key] = raw;
+    }
+    const { titleUrl, authorUrl, authorIcon, footerIcon, image, thumbnail } = urls;
     const fields = Array.isArray(req.body.fields) ? req.body.fields.slice(0, 25).map((f) => ({
       name: String(f.name || '').slice(0, 256) || '\u200b',
       value: String(f.value || '').slice(0, 1024) || '\u200b',
@@ -247,6 +273,8 @@ function createWebApp(bot) {
       thumbnail,
       authorName,
       authorIcon,
+      authorUrl,
+      titleUrl,
       fields,
       buttonData,
       color: Number.parseInt(rawColor.replace('#', ''), 16),

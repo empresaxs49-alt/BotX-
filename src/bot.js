@@ -15,8 +15,17 @@ const {
 const {
   entersState,
   joinVoiceChannel,
+  VoiceConnectionDisconnectReason,
   VoiceConnectionStatus,
 } = require('@discordjs/voice');
+
+// El cifrado DAVE es obligatorio en voz. Sin este paquete Discord cierra la conexión (código 4017).
+let daveAvailable = true;
+try {
+  require.resolve('@snazzah/davey');
+} catch {
+  daveAvailable = false;
+}
 
 const DEFAULT_BLOCKED_WORDS = ['discord.gift/', 'free nitro', 'scam'];
 const MAX_AUDIT_ENTRIES = 150;
@@ -68,6 +77,10 @@ function createBot() {
   const previousVerificationLevels = new Map();
 
   let voiceConnection = null;
+  let voiceTargetId = null; // canal al que el usuario pidió conectar (para reintentos)
+  let voiceRetries = 0;
+  let voiceRetryTimer = null;
+  let lastVoiceError = null;
   let loginRetry = null;
   let lastError = null;
   let isStarting = false;
@@ -113,14 +126,17 @@ function createBot() {
 
   function getVoiceSummary() {
     if (!voiceConnection || voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
-      return { connected: false, channelId: null, channelName: null };
+      return { connected: false, status: 'disconnected', channelId: null, channelName: null, error: lastVoiceError, dave: daveAvailable };
     }
     const guild = getGuild();
     const channel = guild?.channels.cache.get(voiceConnection.joinConfig.channelId);
     return {
       connected: voiceConnection.state.status === VoiceConnectionStatus.Ready,
+      status: voiceConnection.state.status,
       channelId: channel?.id || null,
       channelName: channel?.name || null,
+      error: lastVoiceError,
+      dave: daveAvailable,
     };
   }
 
@@ -196,8 +212,37 @@ function createBot() {
 
   // ─── Embeds predefinidos editables ────────────────────────────
   // Se almacenan como datos planos para poder editarlos desde el panel.
-  const LOGO_URL = 'https://cdn.discordapp.com/attachments/1477078368837964111/1356633862196473938/gif_1.gif';
-  const BANNER_URL = 'https://cdn.discordapp.com/attachments/1477078368837964111/1356633861827108864/DKTl8K1.gif';
+  // Imágenes propias del panel (públicas). Reemplázalas en el editor por tus URLs reales.
+  const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://ggmoney.up.railway.app').replace(/\/$/, '');
+  const LOGO_URL = `${PUBLIC_URL}/assets/logo.gif`;
+  const BANNER_URL = `${PUBLIC_URL}/assets/banner.gif`;
+
+  // ─── Emojis del servidor ──────────────────────────────────────
+  function getEmojiList() {
+    const guild = getGuild();
+    if (!guild) return [];
+    return [...guild.emojis.cache.values()]
+      .map((emoji) => ({ id: emoji.id, name: emoji.name, animated: Boolean(emoji.animated), tag: emoji.toString() }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Discord no convierte «:nombre:» en mensajes de bots; hay que mandar <a:nombre:id>.
+  // Convierte :nombre: en el emoji real del servidor y deja intacto lo que ya viene en formato <...>.
+  function resolveEmojis(text) {
+    if (!text) return text;
+    const guild = getGuild();
+    if (!guild) return text;
+    return String(text).replace(/(?<![<\w:]):([A-Za-z0-9_]{2,32}):(?!\d+>)/g, (match, name) => {
+      const found = guild.emojis.cache.find((emoji) => emoji.name.toLowerCase() === name.toLowerCase());
+      return found ? found.toString() : match;
+    });
+  }
+
+  // Normaliza el emoji de un botón: acepta 🎫, :nombre:, <:nombre:id> o <a:nombre:id>.
+  function resolveButtonEmoji(value) {
+    const resolved = resolveEmojis(String(value || '').trim());
+    return resolved || undefined;
+  }
 
   const embedTemplates = {
     tickets: {
@@ -273,7 +318,7 @@ function createBot() {
     },
     dripclient: {
       color: 0x7b00ff,
-      title: '<:xslogo:1559619455406055434>  **DRIP CLIENT x$**',
+      title: '**DRIP CLIENT x$**',
       description:
         '» **Ghost Hack**\t\t\t» **ESP Health**\n' +
         '» **Speed Hack**\t\t\t» **ESP Bones**\n' +
@@ -322,11 +367,11 @@ function createBot() {
     if (!tpl) return null;
     const embed = new EmbedBuilder().setColor(tpl.color).setTimestamp();
     if (tpl.author) embed.setAuthor({ name: tpl.author.name, iconURL: tpl.author.iconURL || undefined });
-    if (tpl.title) embed.setTitle(tpl.title);
-    if (tpl.description) embed.setDescription(tpl.description);
+    if (tpl.title) embed.setTitle(resolveEmojis(tpl.title));
+    if (tpl.description) embed.setDescription(resolveEmojis(tpl.description));
     if (tpl.thumbnail) embed.setThumbnail(tpl.thumbnail);
     if (tpl.image) embed.setImage(tpl.image);
-    if (tpl.footer) embed.setFooter({ text: tpl.footer.text, iconURL: tpl.footer.iconURL || undefined });
+    if (tpl.footer?.text) embed.setFooter({ text: tpl.footer.text, iconURL: tpl.footer.iconURL || undefined });
     return embed;
   }
 
@@ -347,13 +392,13 @@ function createBot() {
     const styleMap = { Primary: ButtonStyle.Primary, Secondary: ButtonStyle.Secondary, Success: ButtonStyle.Success, Danger: ButtonStyle.Danger };
     const row = new ActionRowBuilder();
     for (const btn of tpl.buttons.slice(0, 5)) {
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(btn.id || 'ticket:create')
-          .setLabel(btn.label || 'Ticket')
-          .setEmoji(btn.emoji || '🎫')
-          .setStyle(styleMap[btn.style] || ButtonStyle.Primary),
-      );
+      const button = new ButtonBuilder()
+        .setCustomId(btn.id || 'ticket:create')
+        .setLabel(btn.label || 'Ticket')
+        .setStyle(styleMap[btn.style] || ButtonStyle.Primary);
+      const emoji = resolveButtonEmoji(btn.emoji);
+      if (emoji) button.setEmoji(emoji);
+      row.addComponents(button);
     }
     return [row];
   }
@@ -375,7 +420,7 @@ function createBot() {
     return { ok: true, message: `Embed enviado a #${channel.name}.` };
   }
 
-  async function sendCustomEmbed({ channelId, title, description, color, footer, footerIcon, image, thumbnail, authorName, authorIcon, fields, buttonData }) {
+  async function sendCustomEmbed({ channelId, title, titleUrl, description, color, footer, footerIcon, image, thumbnail, authorName, authorIcon, authorUrl, fields, buttonData }) {
     const guild = getGuild();
     if (!guild) return { ok: false, message: 'El bot aún no está conectado al servidor configurado.' };
     const channel = guild.channels.cache.get(channelId);
@@ -386,9 +431,10 @@ function createBot() {
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTimestamp();
-    if (authorName) embed.setAuthor({ name: authorName, iconURL: authorIcon || undefined });
-    if (title) embed.setTitle(title);
-    if (description) embed.setDescription(description);
+    if (authorName) embed.setAuthor({ name: authorName, iconURL: authorIcon || undefined, url: authorUrl || undefined });
+    if (title) embed.setTitle(resolveEmojis(title));
+    if (title && titleUrl) embed.setURL(titleUrl);
+    if (description) embed.setDescription(resolveEmojis(description));
     if (footer) {
       const footerObj = { text: footer };
       if (footerIcon) footerObj.iconURL = footerIcon;
@@ -397,34 +443,36 @@ function createBot() {
     if (image) embed.setImage(image);
     if (thumbnail) embed.setThumbnail(thumbnail);
     if (Array.isArray(fields) && fields.length > 0) {
-      embed.addFields(fields.slice(0, 25));
+      embed.addFields(fields.slice(0, 25).map((field) => ({
+        name: resolveEmojis(field.name),
+        value: resolveEmojis(field.value),
+        inline: Boolean(field.inline),
+      })));
     }
 
     const components = [];
     if (buttonData && buttonData.type) {
       const styleMap = { Primary: ButtonStyle.Primary, Secondary: ButtonStyle.Secondary, Success: ButtonStyle.Success, Danger: ButtonStyle.Danger };
-      const row = new ActionRowBuilder();
-      if (buttonData.type === 'link' && buttonData.url) {
-        row.addComponents(
-          new ButtonBuilder()
-            .setLabel(buttonData.label || 'Enlace')
-            .setStyle(ButtonStyle.Link)
-            .setURL(buttonData.url)
-            .setEmoji(buttonData.emoji || undefined),
-        );
+      const button = new ButtonBuilder().setLabel(buttonData.label || (buttonData.type === 'link' ? 'Enlace' : 'Abrir ticket'));
+      const emoji = resolveButtonEmoji(buttonData.emoji);
+      if (buttonData.type === 'link') {
+        if (!/^https?:\/\//i.test(buttonData.url || '')) {
+          return { ok: false, message: 'El botón de enlace necesita una URL que empiece con http:// o https://.' };
+        }
+        button.setStyle(ButtonStyle.Link).setURL(buttonData.url);
       } else {
-        row.addComponents(
-          new ButtonBuilder()
-            .setCustomId('ticket:create')
-            .setLabel(buttonData.label || 'Abrir ticket')
-            .setStyle(styleMap[buttonData.style] || ButtonStyle.Primary)
-            .setEmoji(buttonData.emoji || '🎫'),
-        );
+        button.setCustomId('ticket:create').setStyle(styleMap[buttonData.style] || ButtonStyle.Primary);
       }
-      components.push(row);
+      if (emoji) button.setEmoji(emoji);
+      components.push(new ActionRowBuilder().addComponents(button));
     }
 
-    await channel.send({ embeds: [embed], components });
+    try {
+      await channel.send({ embeds: [embed], components });
+    } catch (error) {
+      writeAudit('error', `Discord rechazó el embed: ${error.message}`);
+      return { ok: false, message: `Discord rechazó el embed: ${error.message}` };
+    }
     writeAudit('success', `Embed personalizado enviado a #${channel.name}.`);
     return { ok: true, message: `Embed enviado a #${channel.name}.` };
   }
@@ -501,52 +549,124 @@ function createBot() {
     return { ok: true, message: `Ticket ${name} cerrado.` };
   }
 
-  async function connectVoice(channelId) {
+  // Códigos de cierre del gateway de voz que explican por qué Discord saca al bot.
+  const VOICE_CLOSE_HINTS = {
+    4014: 'Discord desconectó al bot (lo sacaron o movieron, o borraron el canal).',
+    4017: 'Discord exige cifrado DAVE y esta conexión no lo negoció. Falta @snazzah/davey o la versión de @discordjs/voice es antigua.',
+    4006: 'La sesión de voz expiró.',
+    4015: 'El servidor de voz de Discord falló; se reintentará.',
+  };
+
+  function describeVoiceClose(code) {
+    return VOICE_CLOSE_HINTS[code] || `Discord cerró la conexión de voz (código ${code}).`;
+  }
+
+  function bindVoiceConnection(connection, channelName) {
+    connection.on('error', (error) => {
+      lastVoiceError = error.message;
+      writeAudit('error', `Error en la conexión de voz: ${error.message}`);
+    });
+
+    connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+      if (newState.reason === VoiceConnectionDisconnectReason.WebSocketClose && newState.closeCode) {
+        lastVoiceError = describeVoiceClose(newState.closeCode);
+        writeAudit('warning', lastVoiceError);
+      } else {
+        writeAudit('warning', 'La conexión de voz se interrumpió; intentando recuperarla.');
+      }
+      try {
+        // Si Discord está reubicando la sesión, pasa a Signalling/Connecting solo.
+        await Promise.race([
+          entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+          entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+        ]);
+      } catch {
+        if (connection.state.status !== VoiceConnectionStatus.Destroyed) connection.destroy();
+      }
+    });
+
+    connection.on(VoiceConnectionStatus.Ready, () => {
+      voiceRetries = 0;
+      lastVoiceError = null;
+      writeAudit('success', `Bot conectado al canal de voz «${channelName}».`);
+    });
+
+    connection.on(VoiceConnectionStatus.Destroyed, () => {
+      // Si fue reemplazada o la cerró el usuario, voiceConnection ya no apunta a esta.
+      if (voiceConnection !== connection) return;
+      voiceConnection = null;
+      if (!voiceTargetId || voiceRetries >= 3) return;
+      voiceRetries += 1;
+      const delay = 4_000 * voiceRetries;
+      writeAudit('warning', `La conexión de voz se perdió. Reintento ${voiceRetries}/3 en ${delay / 1000}s.`);
+      clearTimeout(voiceRetryTimer);
+      voiceRetryTimer = setTimeout(() => {
+        if (voiceTargetId) connectVoice(voiceTargetId, { automatic: true }).catch(() => {});
+      }, delay);
+    });
+  }
+
+  async function connectVoice(channelId, { automatic = false } = {}) {
     const guild = getGuild();
     const channel = guild?.channels.cache.get(channelId);
     if (!channel || ![ChannelType.GuildVoice, ChannelType.GuildStageVoice].includes(channel.type)) {
       return { ok: false, message: 'Selecciona un canal de voz válido.' };
     }
+    if (!daveAvailable) {
+      lastVoiceError = 'Falta la dependencia @snazzah/davey (cifrado DAVE obligatorio).';
+      writeAudit('error', lastVoiceError);
+      return { ok: false, message: lastVoiceError };
+    }
+    if (!channel.joinable) {
+      lastVoiceError = `El bot no tiene permiso para ver/conectarse a «${channel.name}» (o el canal está lleno).`;
+      writeAudit('error', lastVoiceError);
+      return { ok: false, message: lastVoiceError };
+    }
+
+    if (!automatic) voiceRetries = 0;
+    voiceTargetId = channel.id;
+    clearTimeout(voiceRetryTimer);
+
+    // Reemplazar una conexión previa sin que dispare el reintento automático.
+    if (voiceConnection) {
+      const previous = voiceConnection;
+      voiceConnection = null;
+      previous.destroy();
+    }
+
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+      selfDeaf: true,
+      selfMute: true,
+    });
+    voiceConnection = connection;
+    bindVoiceConnection(connection, channel.name);
 
     try {
-      if (voiceConnection) {
-        voiceConnection.destroy();
-        voiceConnection = null;
-      }
-      voiceConnection = joinVoiceChannel({
-        channelId: channel.id,
-        guildId: guild.id,
-        adapterCreator: guild.voiceAdapterCreator,
-        selfDeaf: true,
-        selfMute: true,
-      });
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 15_000);
-      voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
-        writeAudit('warning', 'La conexión de voz se desconectó.');
-        try {
-          await Promise.race([
-            entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
-            entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
-          ]);
-        } catch {
-          voiceConnection?.destroy();
-          voiceConnection = null;
-        }
-      });
-      writeAudit('success', `Bot conectado al canal de voz «${channel.name}».`);
+      await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
       return { ok: true, message: `Conectado a «${channel.name}».`, voice: getVoiceSummary() };
     } catch (error) {
-      voiceConnection?.destroy();
-      voiceConnection = null;
-      writeAudit('error', `No se pudo conectar a voz: ${error.message}`);
-      return { ok: false, message: 'No fue posible conectar a ese canal de voz.' };
+      const reason = lastVoiceError || 'Discord no completó la conexión de voz a tiempo.';
+      writeAudit('error', `No se pudo conectar a voz: ${reason}`);
+      if (voiceConnection === connection) {
+        voiceTargetId = null;
+        voiceConnection = null;
+      }
+      if (connection.state.status !== VoiceConnectionStatus.Destroyed) connection.destroy();
+      return { ok: false, message: reason };
     }
   }
 
   function disconnectVoice() {
+    voiceTargetId = null; // evita la reconexión automática
+    clearTimeout(voiceRetryTimer);
     if (!voiceConnection) return { ok: false, message: 'El bot no está conectado a voz.' };
-    voiceConnection.destroy();
+    const connection = voiceConnection;
     voiceConnection = null;
+    connection.destroy();
+    lastVoiceError = null;
     writeAudit('info', 'Bot desconectado del canal de voz desde el panel.');
     return { ok: true, message: 'Bot desconectado del canal de voz.', voice: getVoiceSummary() };
   }
@@ -615,6 +735,9 @@ function createBot() {
       activities: [{ name: 'X$ • Panel y soporte', type: 3 }],
     });
     writeAudit('success', `Bot conectado como ${client.user.tag}.`);
+    writeAudit(daveAvailable ? 'info' : 'error', daveAvailable
+      ? 'Voz: cifrado DAVE disponible.'
+      : 'Voz: falta @snazzah/davey; Discord rechazará las conexiones de voz.');
     await registerCommands();
   });
 
@@ -755,8 +878,13 @@ function createBot() {
 
   async function stop() {
     clearTimeout(loginRetry);
-    if (voiceConnection) voiceConnection.destroy();
-    voiceConnection = null;
+    clearTimeout(voiceRetryTimer);
+    voiceTargetId = null;
+    if (voiceConnection) {
+      const connection = voiceConnection;
+      voiceConnection = null;
+      connection.destroy();
+    }
     client.destroy();
   }
 
@@ -768,6 +896,7 @@ function createBot() {
     clearLogs,
     getTickets,
     getEmbedTemplates,
+    getEmojiList,
     updateEmbedTemplate,
     sendPredefinedEmbed,
     sendCustomEmbed,

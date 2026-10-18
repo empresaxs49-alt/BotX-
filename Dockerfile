@@ -1,13 +1,14 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Dependencias exactas y sin paquetes opcionales/nativos de Opus.
-COPY package.json .npmrc ./
-RUN npm install --omit=optional --ignore-scripts --no-audit --no-fund
+# Instalación reproducible. Las dependencias opcionales SÍ se instalan:
+# @snazzah/davey (cifrado DAVE, obligatorio en voz) trae su binario precompilado así.
+# No hay @discordjs/opus ni nada que compile código nativo.
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
-# Solo se copian los archivos necesarios para ejecutar la app.
 COPY index.js ./
 COPY src ./src
 COPY web ./web
