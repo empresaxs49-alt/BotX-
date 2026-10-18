@@ -225,6 +225,14 @@ function createWebApp(bot) {
     const footerIcon = String(req.body.footerIcon || '').trim().slice(0, 2_048) || undefined;
     const image = String(req.body.image || '').trim().slice(0, 2_048) || undefined;
     const thumbnail = String(req.body.thumbnail || '').trim().slice(0, 2_048) || undefined;
+    const authorName = String(req.body.authorName || '').trim().slice(0, 256) || undefined;
+    const authorIcon = String(req.body.authorIcon || '').trim().slice(0, 2_048) || undefined;
+    const fields = Array.isArray(req.body.fields) ? req.body.fields.slice(0, 25).map((f) => ({
+      name: String(f.name || '').slice(0, 256) || '\u200b',
+      value: String(f.value || '').slice(0, 1024) || '\u200b',
+      inline: Boolean(f.inline),
+    })) : [];
+    const buttonData = req.body.button || null;
     const rawColor = String(req.body.color || '#00ff88').trim();
     if (!title && !description) return res.status(400).json({ ok: false, message: 'Agrega al menos un título o una descripción.' });
     if (!isValidHexColor(rawColor)) return res.status(400).json({ ok: false, message: 'El color debe ser hexadecimal, por ejemplo #00ff88.' });
@@ -237,6 +245,10 @@ function createWebApp(bot) {
       footerIcon,
       image,
       thumbnail,
+      authorName,
+      authorIcon,
+      fields,
+      buttonData,
       color: Number.parseInt(rawColor.replace('#', ''), 16),
     });
     res.status(result.ok ? 200 : 400).json(result);

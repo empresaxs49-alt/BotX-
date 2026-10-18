@@ -375,7 +375,7 @@ function createBot() {
     return { ok: true, message: `Embed enviado a #${channel.name}.` };
   }
 
-  async function sendCustomEmbed({ channelId, title, description, color, footer, footerIcon, image, thumbnail }) {
+  async function sendCustomEmbed({ channelId, title, description, color, footer, footerIcon, image, thumbnail, authorName, authorIcon, fields, buttonData }) {
     const guild = getGuild();
     if (!guild) return { ok: false, message: 'El bot aún no está conectado al servidor configurado.' };
     const channel = guild.channels.cache.get(channelId);
@@ -386,6 +386,7 @@ function createBot() {
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTimestamp();
+    if (authorName) embed.setAuthor({ name: authorName, iconURL: authorIcon || undefined });
     if (title) embed.setTitle(title);
     if (description) embed.setDescription(description);
     if (footer) {
@@ -395,8 +396,35 @@ function createBot() {
     }
     if (image) embed.setImage(image);
     if (thumbnail) embed.setThumbnail(thumbnail);
+    if (Array.isArray(fields) && fields.length > 0) {
+      embed.addFields(fields.slice(0, 25));
+    }
 
-    await channel.send({ embeds: [embed] });
+    const components = [];
+    if (buttonData && buttonData.type) {
+      const styleMap = { Primary: ButtonStyle.Primary, Secondary: ButtonStyle.Secondary, Success: ButtonStyle.Success, Danger: ButtonStyle.Danger };
+      const row = new ActionRowBuilder();
+      if (buttonData.type === 'link' && buttonData.url) {
+        row.addComponents(
+          new ButtonBuilder()
+            .setLabel(buttonData.label || 'Enlace')
+            .setStyle(ButtonStyle.Link)
+            .setURL(buttonData.url)
+            .setEmoji(buttonData.emoji || undefined),
+        );
+      } else {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId('ticket:create')
+            .setLabel(buttonData.label || 'Abrir ticket')
+            .setStyle(styleMap[buttonData.style] || ButtonStyle.Primary)
+            .setEmoji(buttonData.emoji || '🎫'),
+        );
+      }
+      components.push(row);
+    }
+
+    await channel.send({ embeds: [embed], components });
     writeAudit('success', `Embed personalizado enviado a #${channel.name}.`);
     return { ok: true, message: `Embed enviado a #${channel.name}.` };
   }

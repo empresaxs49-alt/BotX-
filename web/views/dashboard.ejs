@@ -130,54 +130,125 @@
           </div>
         </article>
 
-        <!-- Editor de embeds predefinidos -->
+        <!-- Editor rápido de predefinidos -->
         <article class="surface-card" style="margin-top:16px">
-          <div class="surface-card__head"><div><span class="eyebrow">EDITOR</span><h2>Editar embed predefinido</h2></div></div>
-          <p class="field-hint">Selecciona un embed, modifica campos y guarda. Los emojis de servidor (<code>&lt;a:nombre:id&gt;</code>) funcionan en título y descripción.</p>
+          <div class="surface-card__head"><div><span class="eyebrow">EDITOR RÁPIDO</span><h2>Editar embed predefinido</h2></div></div>
+          <p class="field-hint">Selecciona, edita y guarda. Emojis <code>&lt;a:nombre:id&gt;</code> funcionan en título y descripción.</p>
           <div style="display:grid;gap:14px;margin-top:14px;">
-            <label class="field"><span>Embed a editar</span><select data-tpl-select><option value="">— Seleccionar —</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Panel Premium</option><option value="panelbasico">📦 Panel Básico</option><option value="dripclient">🟣 Drip Client</option></select></label>
-            <label class="field"><span>Título</span><input data-tpl-title maxlength="256" placeholder="Título del embed — soporta emojis <a:name:id>"></label>
-            <label class="field"><span>Descripción</span><textarea data-tpl-desc maxlength="4096" rows="8" placeholder="Contenido del embed — soporta emojis de servidor, markdown, \n para saltos"></textarea></label>
-            <div class="form-row"><label class="field"><span>Color hex</span><input data-tpl-color maxlength="7" placeholder="#2b2d31"></label><label class="field"><span>Footer texto</span><input data-tpl-footer maxlength="2048" placeholder="Copyright © 2026 | x$"></label></div>
-            <div class="form-row"><label class="field"><span>Footer icono URL</span><input data-tpl-footer-icon maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label><label class="field"><span>Thumbnail URL</span><input data-tpl-thumbnail maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label></div>
-            <label class="field"><span>Imagen grande URL</span><input data-tpl-image maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label>
-            <div class="button-row"><button class="button button--primary" type="button" data-tpl-save>💾 Guardar cambios</button><button class="button button--ghost" type="button" data-tpl-reset>↺ Recargar original</button></div>
+            <label class="field"><span>Embed</span><select data-tpl-select><option value="">—</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Premium</option><option value="panelbasico">📦 Básico</option><option value="dripclient">🟣 Drip</option></select></label>
+            <label class="field"><span>Título</span><input data-tpl-title maxlength="256"></label>
+            <label class="field"><span>Descripción</span><textarea data-tpl-desc maxlength="4096" rows="5"></textarea></label>
+            <div class="form-row"><label class="field"><span>Color</span><input data-tpl-color maxlength="7" placeholder="#2b2d31"></label><label class="field"><span>Footer</span><input data-tpl-footer maxlength="2048"></label></div>
+            <div class="form-row"><label class="field"><span>Footer icono</span><input data-tpl-footer-icon maxlength="2048"></label><label class="field"><span>Thumbnail</span><input data-tpl-thumbnail maxlength="2048"></label></div>
+            <label class="field"><span>Imagen</span><input data-tpl-image maxlength="2048"></label>
+            <div class="button-row"><button class="button button--primary" type="button" data-tpl-save>💾 Guardar</button><button class="button button--ghost" type="button" data-tpl-reset>↺ Recargar</button></div>
           </div>
         </article>
       </section>
 
-      <!-- Editor personalizado -->
+      <!-- ══ EDITOR DE EMBEDS CON PESTAÑAS ══════════════════════ -->
       <section class="panel-section" data-section="composer" id="composer">
-        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor personalizado</h1><p>Crea un embed desde cero con emojis de servidor, imágenes y footer personalizado.</p></div></div>
-        <div class="two-column">
-          <form class="surface-card stack-form" data-composer-form>
-            <label class="field"><span>Título</span><input data-composer-title maxlength="256" placeholder="Título — soporta <a:emoji:id>"></label>
-            <label class="field"><span>Descripción</span><textarea data-composer-description maxlength="4096" rows="6" placeholder="Escribe el contenido…&#10;Usa <a:nombre:id> para emojis animados de servidor&#10;Usa <:nombre:id> para emojis estáticos"></textarea></label>
-            <div class="form-row"><label class="field"><span>Color</span><input data-composer-color value="#00ff88" maxlength="7" placeholder="#00ff88"></label><label class="field"><span>Footer</span><input data-composer-footer maxlength="2048" placeholder="Copyright © 2026 | x$"></label></div>
-            <div class="form-row"><label class="field"><span>Footer icono URL</span><input data-composer-footer-icon maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label><label class="field"><span>Thumbnail URL</span><input data-composer-thumbnail maxlength="2048" placeholder="https://..."></label></div>
-            <label class="field"><span>Imagen grande URL</span><input data-composer-image maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label>
-            <label class="field"><span>Canal de destino</span><select data-composer-channel required><option value="">Selecciona un canal</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
-            <button class="button button--primary" type="submit">Enviar embed personalizado <span>→</span></button>
-          </form>
-          <aside class="surface-card composer-preview-wrap">
-            <div class="surface-card__head"><div><span class="eyebrow">VISTA PREVIA</span><h2>Así se verá</h2></div></div>
-            <article class="discord-preview" data-composer-preview>
-              <div class="discord-preview__bar" data-preview-color></div>
-              <div class="discord-preview__body">
-                <div class="discord-preview__content">
-                  <strong data-preview-title>Título del anuncio</strong>
-                  <p data-preview-description>La descripción aparecerá aquí cuando escribas tu mensaje.</p>
-                </div>
-                <img class="discord-preview__thumb" data-preview-thumbnail alt="" style="display:none">
-              </div>
-              <img class="discord-preview__image" data-preview-image alt="" style="display:none">
-              <div class="discord-preview__footer">
-                <img class="discord-preview__footer-icon" data-preview-footer-icon alt="" style="display:none">
-                <small data-preview-footer>X$ · Panel</small>
-              </div>
-            </article>
-          </aside>
+        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor de Embeds</h1><p>Construye un embed completo con preview en tiempo real.</p></div></div>
+
+        <div class="editor-topbar">
+          <label class="field"><span>🔖 PLANTILLA BASE</span><select data-ed-base><option value="">— Embed en blanco —</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Premium</option><option value="panelbasico">📦 Básico</option><option value="dripclient">🟣 Drip</option></select></label>
+          <label class="field"><span>▶ CANAL DESTINO</span><select data-composer-channel required><option value="">Selecciona canal…</option><% overview.textChannels.forEach((ch) => { %><option value="<%= ch.id %>"># <%= ch.name %></option><% }) %></select></label>
+          <div class="editor-topbar__info"><span class="char-counter" data-ed-chars>Caracteres: 0 / 6000</span><button class="button button--primary" type="button" data-ed-send>📨 Enviar Embed</button></div>
         </div>
+
+        <article class="surface-card editor-card">
+          <nav class="ed-tabs" role="tablist">
+            <button class="ed-tab is-active" type="button" data-ed-tab="author">👤 Autor</button>
+            <button class="ed-tab" type="button" data-ed-tab="content">📄 Contenido</button>
+            <button class="ed-tab" type="button" data-ed-tab="fields">📊 Campos</button>
+            <button class="ed-tab" type="button" data-ed-tab="media">🖼 Media</button>
+            <button class="ed-tab" type="button" data-ed-tab="footer">⌊ Footer</button>
+            <button class="ed-tab" type="button" data-ed-tab="style">🎨 Estilo</button>
+            <button class="ed-tab" type="button" data-ed-tab="button">⚫ Botón</button>
+          </nav>
+
+          <div class="ed-pane is-visible" data-ed-pane="author">
+            <div class="form-row"><label class="field"><span>EMOJI DEL AUTOR</span><input data-ed-author-emoji placeholder="🎫 o <a:nombre:ID>" maxlength="64"><p class="field-hint">🎫 normal, <code>&lt;:n:ID&gt;</code> estático, <code>&lt;a:n:ID&gt;</code> animado</p></label><label class="field"><span>NOMBRE DEL AUTOR</span><input data-ed-author-name maxlength="256" placeholder="x$"><span class="input-counter" data-count-for="ed-author-name">0/256</span></label></div>
+            <label class="field"><span>URL DEL AUTOR (OPCIONAL)</span><input data-ed-author-url placeholder="https://..." maxlength="2048"><p class="field-hint">El nombre se vuelve clickeable</p></label>
+            <label class="field"><span>URL DEL ÍCONO DEL AUTOR</span><input data-ed-author-icon placeholder="https://i.imgur.com/..." maxlength="2048"><p class="field-hint">Imagen pequeña a la izquierda del nombre</p></label>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="content">
+            <label class="field"><span>TÍTULO</span><input data-ed-title placeholder="Título del embed..." maxlength="256"><span class="input-counter" data-count-for="ed-title">0/256</span></label>
+            <label class="field"><span>URL DEL TÍTULO</span><input data-ed-title-url placeholder="https://... (clickeable)" maxlength="2048"></label>
+            <label class="field"><span>DESCRIPCIÓN</span><textarea data-ed-description rows="7" maxlength="4096" placeholder="Soporta **negrita**, *cursiva*, __subrayado__, ~~tachado~~&#10;y saltos de línea&#10;Usa <a:nombre:ID> para emojis de servidor"></textarea><span class="input-counter" data-count-for="ed-description">0/4096</span></label>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="fields">
+            <div class="ed-fields-list" data-ed-fields></div>
+            <button class="button button--ghost" type="button" data-ed-add-field style="width:100%">+ Agregar Campo (<span data-ed-field-count>0</span>/25)</button>
+            <p class="field-hint" style="text-align:center;margin-top:8px">Inline = 3 por fila. Bloque = fila completa. Máx 25 campos.</p>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="media">
+            <label class="field"><span>🖼 IMAGEN PRINCIPAL</span><input data-ed-image placeholder="https://i.imgur.com/..." maxlength="2048"><p class="field-hint">Aparece debajo de la descripción (PNG, JPG, GIF, WEBP)</p></label>
+            <label class="field"><span>🖼 THUMBNAIL (MINIATURA)</span><input data-ed-thumbnail placeholder="https://..." maxlength="2048"><p class="field-hint">Esquina superior derecha del embed</p></label>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="footer">
+            <label class="field"><span>TEXTO DEL FOOTER</span><input data-ed-footer placeholder="» x$" maxlength="2048"><span class="input-counter" data-count-for="ed-footer">0/2048</span></label>
+            <label class="field"><span>URL DEL ÍCONO DEL FOOTER</span><input data-ed-footer-icon placeholder="https://..." maxlength="2048"><p class="field-hint">Imagen circular a la izquierda del footer</p></label>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="style">
+            <span class="field" style="gap:10px"><span>COLOR DE LA BARRA LATERAL</span>
+              <div class="color-swatches" data-ed-swatches>
+                <button type="button" class="swatch" style="background:#5865F2" data-swatch="#5865F2"></button>
+                <button type="button" class="swatch" style="background:#7b2fff" data-swatch="#7b2fff"></button>
+                <button type="button" class="swatch" style="background:#EB459E" data-swatch="#EB459E"></button>
+                <button type="button" class="swatch" style="background:#00ff88" data-swatch="#00ff88"></button>
+                <button type="button" class="swatch" style="background:#57F287" data-swatch="#57F287"></button>
+                <button type="button" class="swatch" style="background:#FEE75C" data-swatch="#FEE75C"></button>
+                <button type="button" class="swatch" style="background:#F47B67" data-swatch="#F47B67"></button>
+                <button type="button" class="swatch" style="background:#ED4245" data-swatch="#ED4245"></button>
+                <button type="button" class="swatch" style="background:#E67E22" data-swatch="#E67E22"></button>
+                <button type="button" class="swatch" style="background:#23272A" data-swatch="#23272A"></button>
+                <button type="button" class="swatch" style="background:#FF3CAC" data-swatch="#FF3CAC"></button>
+                <button type="button" class="swatch" style="background:#2b2d31" data-swatch="#2b2d31"></button>
+              </div>
+              <div class="color-input-row"><span style="color:var(--muted);font-size:.72rem">HEX:</span><input data-ed-color value="#00ff88" maxlength="7" class="color-hex-input"><span class="color-preview-box" data-ed-color-preview style="background:#00ff88"></span></div>
+            </span>
+          </div>
+
+          <div class="ed-pane" data-ed-pane="button">
+            <label class="field"><span>TIPO DE COMPONENTE</span><select data-ed-btn-type><option value="">Sin componente</option><option value="ticket">Botón de ticket</option><option value="link">Botón de enlace (URL)</option></select></label>
+            <label class="field"><span>ESTILO DEL BOTÓN</span><select data-ed-btn-style><option value="Primary">Primary (Azul)</option><option value="Success">Success (Verde)</option><option value="Danger">Danger (Rojo)</option><option value="Secondary">Secondary (Gris)</option></select></label>
+            <div class="form-row"><label class="field"><span>Texto</span><input data-ed-btn-label placeholder="Abrir ticket" maxlength="80"></label><label class="field"><span>Emoji</span><input data-ed-btn-emoji placeholder="🎫" maxlength="64"></label></div>
+            <label class="field" data-ed-btn-url-wrap style="display:none"><span>URL</span><input data-ed-btn-url placeholder="https://..." maxlength="2048"></label>
+          </div>
+        </article>
+
+        <!-- Preview en tiempo real -->
+        <article class="surface-card" style="margin-top:16px">
+          <div class="surface-card__head"><div><span class="eyebrow">👁 Preview en tiempo real</span></div><span class="tag-sim">Simulado</span></div>
+          <div class="discord-msg-preview">
+            <div class="discord-msg-avatar"><img src="/assets/logo.gif" alt=""></div>
+            <div class="discord-msg-body">
+              <div class="discord-msg-header"><strong><%= overview.botTag.split('#')[0] || 'x$' %></strong><span class="discord-msg-badge">APP</span><span class="discord-msg-time">Hoy <%= new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) %></span></div>
+              <div class="discord-embed" data-ed-preview>
+                <div class="discord-embed__bar" data-ed-pv-color style="background:#00ff88"></div>
+                <div class="discord-embed__main">
+                  <div class="discord-embed__body">
+                    <div class="discord-embed__author" data-ed-pv-author style="display:none"><img data-ed-pv-author-icon alt="" style="display:none"><span data-ed-pv-author-name></span></div>
+                    <strong class="discord-embed__title" data-ed-pv-title></strong>
+                    <div class="discord-embed__desc" data-ed-pv-desc>El contenido aparecerá aquí…</div>
+                    <div class="discord-embed__fields" data-ed-pv-fields></div>
+                  </div>
+                  <img class="discord-embed__thumb" data-ed-pv-thumb alt="" style="display:none">
+                </div>
+                <img class="discord-embed__image" data-ed-pv-image alt="" style="display:none">
+                <div class="discord-embed__footer-row" data-ed-pv-footer-row style="display:none"><img data-ed-pv-footer-icon alt="" style="display:none"><span data-ed-pv-footer></span></div>
+              </div>
+              <div class="discord-msg-btns" data-ed-pv-buttons></div>
+            </div>
+          </div>
+          <p class="field-hint" style="text-align:center;margin-top:10px">⚠ Vista previa aproximada — el resultado real puede variar</p>
+        </article>
       </section>
 
       <!-- Tickets -->
