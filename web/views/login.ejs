@@ -3,42 +3,53 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>X$ | Login</title>
+  <title>X$ | Acceso al Panel</title>
   <link rel="stylesheet" href="/css/style.css"/>
 </head>
 <body class="login-page">
 
+  <!-- Fondo animado -->
+  <div class="login-bg">
+    <img src="/assets/banner.gif" alt="" class="login-bg-gif"/>
+    <div class="login-bg-overlay"></div>
+  </div>
+
   <div class="login-container">
-    <div class="login-logo">
-      <img src="/assets/logo.gif" alt="X$ Logo" class="logo-gif"/>
-    </div>
-    <div class="login-banner">
-      <img src="/assets/banner.gif" alt="X$ Banner" class="banner-gif"/>
+
+    <!-- Logo circular -->
+    <div class="login-logo-wrap">
+      <div class="login-logo-ring"></div>
+      <img src="/assets/logo.gif" alt="X$" class="login-logo-img"/>
     </div>
 
-    <div class="login-box">
-      <h1 class="login-title">⚡ X$ Panel</h1>
-      <p class="login-sub">Control Center</p>
+    <!-- Card -->
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-brand-name">⚡ X$ PANEL</div>
+        <div class="login-brand-sub">Control Center</div>
+      </div>
 
       <% if (error) { %>
         <div class="alert-error">⚠️ <%= error %></div>
       <% } %>
 
-      <form method="POST" action="/login" class="login-form">
-        <div class="input-group">
-          <label>👤 Usuario</label>
-          <input type="text" name="username" placeholder="Usuario" required autocomplete="off"/>
+      <form method="POST" action="/login" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label">👤 Usuario</label>
+          <input type="text" name="username" class="form-input" placeholder="Usuario" required/>
         </div>
-        <div class="input-group">
-          <label>🔒 Contraseña</label>
-          <input type="password" name="password" placeholder="Contraseña" required/>
+        <div class="form-group">
+          <label class="form-label">🔒 Contraseña</label>
+          <input type="password" name="password" class="form-input" placeholder="••••••••" required/>
         </div>
-        <button type="submit" class="btn-login">Entrar al Panel →</button>
+        <button type="submit" class="btn-primary">ACCEDER →</button>
       </form>
 
-      <p class="login-footer">X$ | Lo mejor en venta de cheats 🔥</p>
+      <p class="login-footer-text">
+        <span>X$</span> · Lo mejor en venta de cheats 🔥
+      </p>
     </div>
-  </div>
 
+  </div>
 </body>
 </html>

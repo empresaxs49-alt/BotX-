@@ -122,6 +122,30 @@ function startWeb(getClient) {
     }
   });
 
+  // ─── API: EMBED CUSTOM ───────────────────────────────────────
+  app.post('/api/embed/custom', requireAuth, async (req, res) => {
+    const { title, desc, color, footer, channelId } = req.body;
+    if (!channelId) return res.json({ ok: false, msg: 'Canal no especificado' });
+    const client = getClient();
+    const guild  = client?.guilds?.cache?.get(GUILD_ID);
+    const channel = guild?.channels?.cache?.get(channelId);
+    if (!channel) return res.json({ ok: false, msg: 'Canal no encontrado' });
+    const { EmbedBuilder } = require('discord.js');
+    const colorInt = parseInt((color || '#00ff88').replace('#',''), 16);
+    const embed = new EmbedBuilder()
+      .setTitle(title || 'Embed')
+      .setDescription(desc || '')
+      .setColor(colorInt)
+      .setFooter(footer ? { text: footer } : { text: 'X$ Panel' })
+      .setTimestamp();
+    try {
+      await channel.send({ embeds: [embed] });
+      res.json({ ok: true, msg: `Embed enviado a #${channel.name}` });
+    } catch (e) {
+      res.json({ ok: false, msg: e.message });
+    }
+  });
+
   // ─── API: STATUS DEL BOT ─────────────────────────────────────────
   app.get('/api/status', requireAuth, (req, res) => {
     const client = getClient();
