@@ -1,55 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>X$ | Acceso al Panel</title>
-  <link rel="stylesheet" href="/css/style.css"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020704">
+  <title>X$ Panel · Acceso</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="login-page">
-
-  <!-- Fondo animado -->
-  <div class="login-bg">
-    <img src="/assets/banner.gif" alt="" class="login-bg-gif"/>
-    <div class="login-bg-overlay"></div>
+  <div class="ambient-background" aria-hidden="true">
+    <img src="/assets/banner.gif" class="ambient-banner" alt="">
+    <div class="ambient-shade"></div>
+    <div class="ambient-grid"></div>
   </div>
 
-  <div class="login-container">
-
-    <!-- Logo circular -->
-    <div class="login-logo-wrap">
-      <div class="login-logo-ring"></div>
-      <img src="/assets/logo.gif" alt="X$" class="login-logo-img"/>
+  <main class="login-shell">
+    <div class="login-orbit" aria-hidden="true"></div>
+    <div class="brand-lockup">
+      <span class="brand-logo brand-logo--large"><img src="/assets/logo.gif" alt="Logo X$"></span>
+      <div>
+        <p class="brand-kicker">CONTROL CENTER</p>
+        <h1>X$ <span>Panel</span></h1>
+      </div>
     </div>
 
-    <!-- Card -->
-    <div class="login-card">
-      <div class="login-brand">
-        <div class="login-brand-name">⚡ X$ PANEL</div>
-        <div class="login-brand-sub">Control Center</div>
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="login-card__header">
+        <span class="eyebrow">ACCESO SEGURO</span>
+        <h2 id="login-title">Bienvenido de nuevo</h2>
+        <p>Inicia sesión para administrar el bot, los tickets y la comunidad.</p>
       </div>
 
       <% if (error) { %>
-        <div class="alert-error">⚠️ <%= error %></div>
+        <div class="notice notice--error" role="alert">⚠ <%= error %></div>
       <% } %>
 
-      <form method="POST" action="/login" autocomplete="off">
-        <div class="form-group">
-          <label class="form-label">👤 Usuario</label>
-          <input type="text" name="username" class="form-input" placeholder="Usuario" required/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">🔒 Contraseña</label>
-          <input type="password" name="password" class="form-input" placeholder="••••••••" required/>
-        </div>
-        <button type="submit" class="btn-primary">ACCEDER →</button>
+      <form method="post" action="/login" class="stack-form" autocomplete="on">
+        <label class="field">
+          <span>Usuario</span>
+          <input name="username" type="text" autocomplete="username" placeholder="Tu usuario" required maxlength="64" autofocus>
+        </label>
+        <label class="field">
+          <span>Contraseña</span>
+          <input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required maxlength="128">
+        </label>
+        <button class="button button--primary button--full" type="submit">Entrar al panel <span aria-hidden="true">→</span></button>
       </form>
 
-      <p class="login-footer-text">
-        <span>X$</span> · Lo mejor en venta de cheats 🔥
-      </p>
-    </div>
-
-  </div>
+      <p class="login-card__foot"><span class="presence-dot"></span> Panel protegido · Sesión de 6 horas</p>
+    </section>
+  </main>
 </body>
 </html>

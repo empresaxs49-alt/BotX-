@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+npm-debug.log
+.env
+.env.*
+BotX/
+*.py
+__pycache__/
+*.log

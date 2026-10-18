@@ -1,23 +1,22 @@
 {
-  "name": "botx-discord",
-  "version": "1.0.0",
-  "description": "Bot X$ - Discord.js v14 + Express Panel",
+  "name": "x-panel-discord",
+  "version": "2.0.0",
+  "private": true,
+  "description": "X$ Discord bot with a Railway-ready web control panel",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "@discordjs/voice": "^0.17.0",
-    "discord.js": "^14.14.1",
-    "express": "^4.18.2",
-    "express-session": "^1.17.3",
-    "ejs": "^3.1.9",
-    "opusscript": "^0.1.1",
-    "libsodium-wrappers": "^0.7.13",
-    "dotenv": "^16.3.1",
-    "node-fetch": "^2.7.0"
+    "start": "node index.js",
+    "check": "node --check index.js && node --check src/bot.js && node --check web/server.js && node --check web/public/js/dashboard.js"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "20.x"
+  },
+  "dependencies": {
+    "@discordjs/voice": "0.18.0",
+    "discord.js": "14.16.3",
+    "dotenv": "16.4.5",
+    "ejs": "3.1.10",
+    "express": "4.21.2",
+    "express-session": "1.18.1"
   }
 }

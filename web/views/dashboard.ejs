@@ -1,666 +1,202 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>X$ | Panel de Control</title>
-  <link rel="stylesheet" href="/css/style.css"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020704">
+  <title>X$ Panel · Control Center</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/dashboard.js" defer></script>
 </head>
-<body class="dashboard-page">
-
-  <!-- Fondo animado con opacidad -->
-  <div class="page-bg">
-    <img src="/assets/banner.gif" alt="" class="page-bg-gif"/>
-    <div class="page-bg-overlay"></div>
+<body class="app-page">
+  <div class="app-background" aria-hidden="true">
+    <img src="/assets/banner.gif" class="app-background__banner" alt="">
+    <div class="app-background__shade"></div>
+    <div class="app-background__noise"></div>
   </div>
 
-  <!-- ═══ SIDEBAR ══════════════════════════════════════════════ -->
-  <aside class="sidebar" id="sidebar">
-    <a href="#inicio" class="sidebar-brand" onclick="showSection('inicio')">
-      <div class="sidebar-logo-wrap">
-        <img src="/assets/logo.gif" alt="X$" class="sidebar-logo-img"/>
-      </div>
-      <div class="sidebar-brand-text">
-        <div class="sidebar-brand-name">X$ Panel</div>
-        <div class="sidebar-brand-status">
-          <span class="status-dot"></span>
-          <span id="sb-status">Online</span>
-        </div>
-      </div>
+  <button class="mobile-menu" type="button" aria-label="Abrir menú" aria-expanded="false" data-menu-toggle>☰</button>
+  <div class="sidebar-backdrop" data-sidebar-backdrop></div>
+
+  <aside class="sidebar" data-sidebar>
+    <a href="#overview" class="sidebar-brand" data-nav="overview">
+      <span class="brand-logo"><img src="/assets/logo.gif" alt="Logo X$"></span>
+      <span class="sidebar-brand__text">
+        <strong>X$ Panel</strong>
+        <small><i class="presence-dot"></i><span data-bot-state>Conectando</span></small>
+      </span>
     </a>
 
-    <div class="sidebar-scroll">
-      <!-- General -->
-      <div class="nav-section">
-        <div class="nav-section-label">General</div>
-        <a class="nav-item active" onclick="showSection('inicio')" id="nav-inicio">
-          <span class="nav-icon">🏠</span> Inicio
-        </a>
-      </div>
+    <nav class="sidebar-nav" aria-label="Panel de control">
+      <p class="nav-caption">General</p>
+      <button class="nav-link is-active" type="button" data-section-target="overview"><span>⌂</span> Resumen</button>
+      <button class="nav-link" type="button" data-section-target="embeds"><span>✦</span> Mensajes y embeds</button>
+      <button class="nav-link" type="button" data-section-target="composer"><span>✎</span> Editor personalizado</button>
 
-      <!-- Gestión Discord -->
-      <div class="nav-section">
-        <div class="nav-section-label">Gestión Discord</div>
-        <a class="nav-item" onclick="showSection('embeds')" id="nav-embeds">
-          <span class="nav-icon">📨</span> Enviar Embeds
-        </a>
-        <a class="nav-item" onclick="showSection('editor')" id="nav-editor">
-          <span class="nav-icon">✏️</span> Editor de Embeds
-        </a>
-        <a class="nav-item" onclick="showSection('tickets')" id="nav-tickets">
-          <span class="nav-icon">🎫</span> Tickets
-        </a>
-      </div>
+      <p class="nav-caption">Comunidad</p>
+      <button class="nav-link" type="button" data-section-target="tickets"><span>◫</span> Tickets <b class="nav-count" data-ticket-count><%= overview.ticketCount || 0 %></b></button>
+      <button class="nav-link" type="button" data-section-target="security"><span>◈</span> Seguridad</button>
+      <button class="nav-link" type="button" data-section-target="voice"><span>◖</span> Bot en voz</button>
+      <button class="nav-link" type="button" data-section-target="presence"><span>◉</span> Presencia</button>
 
-      <!-- Admin -->
-      <div class="nav-section">
-        <div class="nav-section-label">Admin</div>
-        <a class="nav-item" onclick="showSection('usuarios')" id="nav-usuarios">
-          <span class="nav-icon">👥</span> Usuarios
-        </a>
-        <a class="nav-item" onclick="showSection('seguridad')" id="nav-seguridad">
-          <span class="nav-icon">🛡️</span> Seguridad
-        </a>
-        <a class="nav-item" onclick="showSection('logs')" id="nav-logs">
-          <span class="nav-icon">📋</span> Logs
-        </a>
-        <a class="nav-item" onclick="showSection('voz')" id="nav-voz">
-          <span class="nav-icon">🔊</span> Bot en Voz
-        </a>
-        <a class="nav-item" onclick="showSection('backup')" id="nav-backup">
-          <span class="nav-icon">💾</span> Copia de Seguridad
-        </a>
-      </div>
-    </div>
+      <p class="nav-caption">Sistema</p>
+      <button class="nav-link" type="button" data-section-target="activity"><span>▤</span> Actividad</button>
+      <button class="nav-link" type="button" data-section-target="settings"><span>⚙</span> Configuración</button>
+    </nav>
 
     <div class="sidebar-footer">
-      <div class="footer-avatar"><%= user.toString().charAt(0).toUpperCase() %></div>
-      <div class="footer-user-info">
-        <div class="footer-username"><%= user %></div>
-        <div class="footer-role">Admin</div>
-      </div>
-      <a href="/logout" class="btn-logout-icon" title="Cerrar sesión">⏻</a>
+      <span class="user-avatar"><%= user.charAt(0).toUpperCase() %></span>
+      <span class="sidebar-user"><strong><%= user %></strong><small>Administrador</small></span>
+      <form action="/logout" method="post"><button class="icon-button icon-button--danger" title="Cerrar sesión" aria-label="Cerrar sesión" type="submit">⏻</button></form>
     </div>
   </aside>
 
-  <!-- ═══ MAIN ══════════════════════════════════════════════════ -->
-  <main class="main-content">
-
-    <!-- TOPBAR -->
+  <main class="main-shell">
     <header class="topbar">
-      <div class="topbar-title">
-        <span>X$</span> Control Panel
-      </div>
-      <div class="topbar-stat">
-        🤖 <strong id="tb-tag"><%= botTag %></strong>
-      </div>
-      <div class="topbar-stat">
-        📡 <strong id="tb-ping"><%= botPing %>ms</strong>
-      </div>
-      <div class="topbar-stat">
-        <%= botStatus === 'online' ? '🟢' : '🔴' %>
-        <strong id="tb-status"><%= botStatus === 'online' ? 'Online' : 'Offline' %></strong>
+      <div class="topbar__title"><span class="mobile-only">X$</span><span class="desktop-only">X$ · </span>Control center</div>
+      <div class="topbar__signals">
+        <span class="signal-pill"><i class="presence-dot" data-presence-dot></i><b data-bot-state>Conectando</b></span>
+        <span class="signal-pill">⌁ <b data-ping><%= overview.ping || 0 %> ms</b></span>
+        <span class="signal-pill desktop-only">⌂ <b><%= overview.guild ? overview.guild.name : 'Sin servidor' %></b></span>
       </div>
     </header>
 
-    <!-- FLASH -->
-    <div class="flash-container" id="flash-container"></div>
+    <div class="toast-stack" aria-live="polite" aria-atomic="true" data-toast-stack></div>
 
-    <div class="page-content">
-
-      <!-- ══════════════════════════════════════════════════════
-           INICIO
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-inicio" class="section-pane">
-        <div class="section-header">
-          <div>
-            <div class="section-title">🏠 <span>Inicio</span></div>
-            <div class="section-sub">Resumen general del bot y el servidor</div>
+    <div class="content-shell">
+      <!-- Resumen -->
+      <section class="panel-section is-visible" data-section="overview" id="overview">
+        <div class="hero-card">
+          <img src="/assets/banner.gif" class="hero-card__banner" alt="">
+          <div class="hero-card__overlay"></div>
+          <div class="hero-card__content">
+            <span class="eyebrow">CENTRO DE CONTROL</span>
+            <h1>Todo tu servidor,<br><em>en un solo panel.</em></h1>
+            <p>Administra mensajes, soporte, protección y presencia sin salir del navegador.</p>
+            <div class="hero-card__actions">
+              <button class="button button--primary" type="button" data-go="embeds">Enviar un embed <span>→</span></button>
+              <button class="button button--ghost" type="button" data-go="voice">Controlar voz</button>
+            </div>
+          </div>
+          <div class="hero-card__status">
+            <span class="live-chip"><i class="presence-dot" data-presence-dot></i> SISTEMA EN VIVO</span>
+            <p><strong data-bot-tag><%= overview.botTag %></strong><small data-last-refresh>Actualizando datos…</small></p>
           </div>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-top">
-              <div class="stat-icon-box">🤖</div>
-              <span class="stat-change">LIVE</span>
-            </div>
-            <div class="stat-value" id="s-tag"><%= botTag.split('#')[0] || botTag %></div>
-            <div class="stat-label">Bot</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-top">
-              <div class="stat-icon-box">📡</div>
-            </div>
-            <div class="stat-value" id="s-ping"><%= botPing %><span style="font-size:.9rem;color:var(--text-muted)">ms</span></div>
-            <div class="stat-label">Latencia</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-top">
-              <div class="stat-icon-box">👥</div>
-            </div>
-            <div class="stat-value"><%= memberCount %></div>
-            <div class="stat-label">Miembros</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-top">
-              <div class="stat-icon-box">🏠</div>
-            </div>
-            <div class="stat-value" style="font-size:1rem"><%= guildName %></div>
-            <div class="stat-label">Servidor</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-top">
-              <div class="stat-icon-box">⏱️</div>
-            </div>
-            <div class="stat-value" id="s-uptime">—</div>
-            <div class="stat-label">Uptime</div>
-          </div>
+        <div class="stat-grid">
+          <article class="stat-card"><span class="stat-card__icon">🤖</span><div><small>Estado del bot</small><strong data-bot-state>Conectando</strong></div><i class="stat-card__mark"></i></article>
+          <article class="stat-card"><span class="stat-card__icon">⌁</span><div><small>Latencia actual</small><strong data-ping><%= overview.ping || 0 %> ms</strong></div></article>
+          <article class="stat-card"><span class="stat-card__icon">♟</span><div><small>Miembros</small><strong data-member-count><%= overview.guild ? overview.guild.memberCount : 0 %></strong></div></article>
+          <article class="stat-card"><span class="stat-card__icon">◫</span><div><small>Tickets abiertos</small><strong data-ticket-count><%= overview.ticketCount || 0 %></strong></div></article>
+          <article class="stat-card"><span class="stat-card__icon">◖</span><div><small>Canal de voz</small><strong data-voice-name><%= overview.voice?.channelName || 'Desconectado' %></strong></div></article>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title"><span class="icon">⚡</span> Acciones Rápidas</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <button class="btn btn-outline" onclick="showSection('embeds')">📨 Enviar Embed rápido</button>
-              <button class="btn btn-outline" onclick="showSection('voz')">🔊 Conectar a voz</button>
-              <button class="btn btn-outline" onclick="showSection('logs')">📋 Ver logs</button>
+        <div class="dashboard-grid">
+          <article class="surface-card">
+            <div class="surface-card__head"><div><span class="eyebrow">ACCESOS RÁPIDOS</span><h2>Acciones frecuentes</h2></div></div>
+            <div class="quick-grid">
+              <button class="quick-action" type="button" data-go="tickets"><span>🎫</span><b>Tickets</b><small>Ver y cerrar</small></button>
+              <button class="quick-action" type="button" data-go="security"><span>🛡</span><b>Protección</b><small>Configurar módulos</small></button>
+              <button class="quick-action" type="button" data-go="presence"><span>◉</span><b>Presencia</b><small>Cambiar estado</small></button>
+              <button class="quick-action" type="button" data-go="activity"><span>▤</span><b>Actividad</b><small>Revisar eventos</small></button>
             </div>
-          </div>
-          <div class="card">
-            <div class="card-title"><span class="icon">📊</span> Estado del Sistema</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:.84rem;">
-                <span style="color:var(--text-soft)">Bot</span>
-                <span class="tag tag-green" id="sys-bot">Online</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:.84rem;">
-                <span style="color:var(--text-soft)">Anti-Spam</span>
-                <span class="tag tag-green">Activo</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:.84rem;">
-                <span style="color:var(--text-soft)">Anti-Raid</span>
-                <span class="tag tag-green">Activo</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:.84rem;">
-                <span style="color:var(--text-soft)">Filtro de palabras</span>
-                <span class="tag tag-green">Activo</span>
-              </div>
-            </div>
-          </div>
+          </article>
+          <article class="surface-card">
+            <div class="surface-card__head"><div><span class="eyebrow">PROTECCIÓN</span><h2>Estado del sistema</h2></div><button class="text-button" type="button" data-go="security">Configurar</button></div>
+            <ul class="system-list">
+              <li><span><i class="status-dot status-dot--green"></i> Anti-spam</span><b data-protection="antiSpam">Activo</b></li>
+              <li><span><i class="status-dot status-dot--green"></i> Anti-raid</span><b data-protection="antiRaid">Activo</b></li>
+              <li><span><i class="status-dot status-dot--green"></i> Filtro de palabras</span><b data-protection="wordFilter">Activo</b></li>
+              <li><span><i class="status-dot status-dot--green"></i> Auditoría</span><b data-protection="moderationLogs">Activo</b></li>
+            </ul>
+          </article>
         </div>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           ENVIAR EMBEDS
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-embeds" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">📨 <span>Enviar Embeds</span></div>
-            <div class="section-sub">Selecciona canal y tipo de embed a enviar</div>
+      <!-- Embeds predefinidos -->
+      <section class="panel-section" data-section="embeds" id="embeds">
+        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Mensajes y embeds</h1><p>Envía paneles predefinidos a cualquier canal de texto.</p></div></div>
+        <article class="surface-card">
+          <label class="field field--wide"><span>Canal de destino</span><select data-embed-channel><option value="">Selecciona un canal de texto</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
+          <div class="template-grid">
+            <button class="template-card" type="button" data-send-template="tickets"><span>🎫</span><b>Panel de tickets</b><small>Soporte privado con botón</small></button>
+            <button class="template-card" type="button" data-send-template="diamantes"><span>💎</span><b>Diamantes</b><small>Catálogo y soporte</small></button>
+            <button class="template-card" type="button" data-send-template="boosts"><span>🚀</span><b>Boosts</b><small>Planes para servidor</small></button>
+            <button class="template-card" type="button" data-send-template="decoraciones"><span>🎨</span><b>Decoraciones</b><small>Opciones de perfil</small></button>
+            <button class="template-card" type="button" data-send-template="metodos"><span>💳</span><b>Métodos de pago</b><small>Información segura</small></button>
           </div>
-        </div>
+        </article>
+      </section>
 
-        <div class="card" style="margin-bottom:20px">
-          <div class="channel-select-wrap">
-            <label class="channel-select-label">Canal de destino</label>
-            <select id="embed-channel" class="select-field">
-              <option value="">— Seleccionar canal —</option>
-              <% textChannels.forEach(ch => { %>
-                <option value="<%= ch.id %>"># <%= ch.name %></option>
-              <% }) %>
-            </select>
-          </div>
-
-          <div class="card-title" style="margin-top:16px"><span class="icon">📋</span> Tipo de Embed</div>
-          <div class="embed-grid">
-            <button class="embed-btn" onclick="sendEmbed('tickets')">
-              <span class="embed-btn-icon">🎫</span>
-              <span>Tickets</span>
-            </button>
-            <button class="embed-btn" onclick="sendEmbed('diamantes')">
-              <span class="embed-btn-icon">💎</span>
-              <span>Diamantes</span>
-            </button>
-            <button class="embed-btn" onclick="sendEmbed('boosts')">
-              <span class="embed-btn-icon">🚀</span>
-              <span>Boosts</span>
-            </button>
-            <button class="embed-btn" onclick="sendEmbed('decoraciones')">
-              <span class="embed-btn-icon">🎨</span>
-              <span>Decoraciones</span>
-            </button>
-            <button class="embed-btn" onclick="sendEmbed('metodos')">
-              <span class="embed-btn-icon">💳</span>
-              <span>Métodos de Pago</span>
-            </button>
-          </div>
+      <!-- Editor -->
+      <section class="panel-section" data-section="composer" id="composer">
+        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor personalizado</h1><p>Previsualiza un embed antes de enviarlo a Discord.</p></div></div>
+        <div class="two-column">
+          <form class="surface-card stack-form" data-composer-form>
+            <label class="field"><span>Título</span><input data-composer-title maxlength="256" placeholder="Título del anuncio"></label>
+            <label class="field"><span>Descripción</span><textarea data-composer-description maxlength="4096" rows="6" placeholder="Escribe el contenido que verá tu comunidad…"></textarea></label>
+            <div class="form-row"><label class="field"><span>Color</span><input data-composer-color value="#00ff88" maxlength="7" placeholder="#00ff88"></label><label class="field"><span>Footer</span><input data-composer-footer maxlength="2048" placeholder="X$ · Panel"></label></div>
+            <label class="field"><span>Canal de destino</span><select data-composer-channel required><option value="">Selecciona un canal</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
+            <button class="button button--primary" type="submit">Enviar embed personalizado <span>→</span></button>
+          </form>
+          <aside class="surface-card composer-preview-wrap">
+            <div class="surface-card__head"><div><span class="eyebrow">VISTA PREVIA</span><h2>Así se verá</h2></div></div>
+            <article class="discord-preview" data-composer-preview>
+              <div class="discord-preview__bar" data-preview-color></div>
+              <div class="discord-preview__content"><strong data-preview-title>Título del anuncio</strong><p data-preview-description>La descripción aparecerá aquí cuando escribas tu mensaje.</p><small data-preview-footer>X$ · Panel</small></div>
+            </article>
+          </aside>
         </div>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           EDITOR DE EMBEDS
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-editor" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">✏️ <span>Editor de Embeds</span></div>
-            <div class="section-sub">Crea y personaliza tu embed personalizado</div>
-          </div>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title"><span class="icon">⚙️</span> Configuración</div>
-            <div style="display:flex;flex-direction:column;gap:12px;">
-              <div class="form-group">
-                <label class="form-label">Título</label>
-                <input type="text" id="e-title" class="form-input" placeholder="Título del embed"/>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Descripción</label>
-                <textarea id="e-desc" class="form-input" rows="3" placeholder="Descripción..." style="resize:vertical"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Color (hex)</label>
-                <input type="text" id="e-color" class="form-input" placeholder="#00ff88" value="#00ff88"/>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Footer</label>
-                <input type="text" id="e-footer" class="form-input" placeholder="Texto del footer"/>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Canal</label>
-                <select id="editor-channel" class="select-field" style="max-width:100%">
-                  <option value="">— Seleccionar canal —</option>
-                  <% textChannels.forEach(ch => { %>
-                    <option value="<%= ch.id %>"># <%= ch.name %></option>
-                  <% }) %>
-                </select>
-              </div>
-              <button class="btn btn-green" onclick="sendCustomEmbed()">📨 Enviar Embed</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title"><span class="icon">👁️</span> Vista Previa</div>
-            <div id="embed-preview" style="border-left:4px solid #00ff88;padding:14px 16px;background:rgba(255,255,255,0.03);border-radius:0 8px 8px 0;margin-top:8px;">
-              <div id="prev-title" style="font-weight:700;color:#e2e8f0;margin-bottom:8px;">Título del embed</div>
-              <div id="prev-desc" style="font-size:.85rem;color:#8892a4;">Descripción aparecerá aquí...</div>
-              <div id="prev-footer" style="font-size:.72rem;color:#4a5568;margin-top:12px;"></div>
-            </div>
-          </div>
-        </div>
+      <!-- Tickets -->
+      <section class="panel-section" data-section="tickets" id="tickets">
+        <div class="section-head"><div><span class="eyebrow">SOPORTE</span><h1>Tickets activos</h1><p>Visualiza y cierra los canales de soporte que siguen abiertos.</p></div><div class="section-head__actions"><button class="button button--ghost" type="button" data-refresh-tickets>Actualizar</button><button class="button button--primary" type="button" data-go="embeds">Crear panel</button></div></div>
+        <article class="surface-card table-card">
+          <div class="table-wrap"><table><thead><tr><th>Canal</th><th>Propietario</th><th>Creado</th><th></th></tr></thead><tbody data-tickets-body><tr><td colspan="4" class="empty-row">Cargando tickets…</td></tr></tbody></table></div>
+        </article>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           TICKETS
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-tickets" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">🎫 <span>Tickets</span></div>
-            <div class="section-sub">Gestión de tickets activos del servidor</div>
-          </div>
-          <button class="btn btn-green btn-sm" onclick="sendEmbed('tickets'); showSection('embeds')">+ Crear Panel</button>
-        </div>
-        <div class="card">
-          <div class="card-title"><span class="icon">🎫</span> Tickets Activos</div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Canal</th>
-                  <th>Usuario</th>
-                  <th>Estado</th>
-                  <th>Creado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tickets-tbody">
-                <tr><td colspan="5"><div class="empty-state"><span class="empty-state-icon">🎫</span><span class="empty-state-text">No hay tickets activos</span></div></td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <!-- Seguridad -->
+      <section class="panel-section" data-section="security" id="security">
+        <div class="section-head"><div><span class="eyebrow">MODERACIÓN</span><h1>Seguridad</h1><p>Los interruptores actualizan el comportamiento real del bot durante esta sesión.</p></div></div>
+        <article class="surface-card"><div class="security-grid">
+          <label class="security-control"><span class="security-control__icon">⌁</span><span><b>Anti-spam</b><small>Silencia mensajes repetidos rápidamente.</small></span><input type="checkbox" data-security="antiSpam" <%= overview.protection.antiSpam ? 'checked' : '' %>><i class="switch"></i></label>
+          <label class="security-control"><span class="security-control__icon">◈</span><span><b>Anti-raid</b><small>Eleva la verificación ante entradas masivas.</small></span><input type="checkbox" data-security="antiRaid" <%= overview.protection.antiRaid ? 'checked' : '' %>><i class="switch"></i></label>
+          <label class="security-control"><span class="security-control__icon">◉</span><span><b>Filtro de palabras</b><small>Elimina contenido incluido en la lista de bloqueo.</small></span><input type="checkbox" data-security="wordFilter" <%= overview.protection.wordFilter ? 'checked' : '' %>><i class="switch"></i></label>
+          <label class="security-control"><span class="security-control__icon">▤</span><span><b>Logs de moderación</b><small>Guarda acciones en el registro de actividad.</small></span><input type="checkbox" data-security="moderationLogs" <%= overview.protection.moderationLogs ? 'checked' : '' %>><i class="switch"></i></label>
+        </div></article>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           USUARIOS
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-usuarios" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">👥 <span>Usuarios del Panel</span></div>
-            <div class="section-sub">Gestiona el acceso y los permisos de cada cuenta</div>
-          </div>
-          <button class="btn btn-green btn-sm">+ Nuevo Usuario</button>
-        </div>
-        <div class="card">
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Rol</th>
-                  <th>Permisos</th>
-                  <th>Creado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#00ff88,#00b4ff);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#000">A</div><span style="color:var(--text)">admin</span></div></td>
-                  <td><span class="tag tag-green">⚙️ Admin</span></td>
-                  <td>Admin total</td>
-                  <td>31/12/2023</td>
-                  <td><button class="btn btn-icon-only btn-danger">🗑️</button></td>
-                </tr>
-                <tr>
-                  <td><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7b2fff,#00b4ff);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff">D</div><span style="color:var(--text)">Dev</span></div></td>
-                  <td><span class="tag tag-blue">🔧 Developer</span></td>
-                  <td>Acceso total absoluto</td>
-                  <td>31/12/2023</td>
-                  <td><button class="btn btn-icon-only btn-danger">🗑️</button></td>
-                </tr>
-                <tr>
-                  <td><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#ffa502,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#000">C</div><span style="color:var(--text)"><%= user %></span></div></td>
-                  <td><span class="tag tag-yellow">👑 Dueño</span></td>
-                  <td>Todo excepto logs</td>
-                  <td>18/10/2026</td>
-                  <td><button class="btn btn-icon-only btn-danger">🗑️</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <!-- Voz -->
+      <section class="panel-section" data-section="voice" id="voice">
+        <div class="section-head"><div><span class="eyebrow">CONEXIÓN</span><h1>Bot en voz</h1><p>Conecta el bot a un canal; no reproduce audio ni requiere códecs Opus nativos.</p></div></div>
+        <article class="surface-card voice-card"><div><span class="voice-state" data-voice-state><i></i><span><%= overview.voice?.connected ? 'Conectado' : 'Desconectado' %></span></span><h2 data-voice-name><%= overview.voice?.channelName || 'Sin canal seleccionado' %></h2><p>El bot permanece silenciado y ensordecido al conectarse.</p></div><div class="voice-card__controls"><label class="field"><span>Canal de voz</span><select data-voice-channel><option value="">Selecciona un canal</option><% overview.voiceChannels.forEach((channel) => { %><option value="<%= channel.id %>">◖ <%= channel.name %></option><% }) %></select></label><div class="button-row"><button class="button button--primary" type="button" data-voice-connect>Conectar</button><button class="button button--danger" type="button" data-voice-disconnect>Desconectar</button></div></div></article>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           SEGURIDAD
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-seguridad" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">🛡️ <span>Seguridad</span></div>
-            <div class="section-sub">Configuración del sistema de protección</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title"><span class="icon">🛡️</span> Módulos de Protección</div>
-          <div class="security-grid">
-            <div class="security-item">
-              <div class="security-info">
-                <div class="security-name">Anti-Spam</div>
-                <div class="security-desc">Silencia tras 5 msgs/4s</div>
-              </div>
-              <label class="toggle"><input type="checkbox" checked onchange="toggleSecurity(this,'antispam')"><span class="toggle-slider"></span></label>
-            </div>
-            <div class="security-item">
-              <div class="security-info">
-                <div class="security-name">Anti-Raid</div>
-                <div class="security-desc">Bloquea 8+ joins/10s</div>
-              </div>
-              <label class="toggle"><input type="checkbox" checked onchange="toggleSecurity(this,'antiraid')"><span class="toggle-slider"></span></label>
-            </div>
-            <div class="security-item">
-              <div class="security-info">
-                <div class="security-name">Filtro de Palabras</div>
-                <div class="security-desc">Elimina mensajes prohibidos</div>
-              </div>
-              <label class="toggle"><input type="checkbox" checked onchange="toggleSecurity(this,'wordfilter')"><span class="toggle-slider"></span></label>
-            </div>
-            <div class="security-item">
-              <div class="security-info">
-                <div class="security-name">Logs de Moderación</div>
-                <div class="security-desc">Registra acciones del bot</div>
-              </div>
-              <label class="toggle"><input type="checkbox" checked onchange="toggleSecurity(this,'modlogs')"><span class="toggle-slider"></span></label>
-            </div>
-          </div>
-        </div>
+      <!-- Presencia -->
+      <section class="panel-section" data-section="presence" id="presence">
+        <div class="section-head"><div><span class="eyebrow">IDENTIDAD</span><h1>Presencia del bot</h1><p>Actualiza el estado que aparece debajo del nombre del bot en Discord.</p></div></div>
+        <article class="surface-card"><form class="presence-form" data-presence-form><label class="field"><span>Estado</span><select data-presence-status><option value="online">🟢 En línea</option><option value="idle">🌙 Ausente</option><option value="dnd">⛔ No molestar</option><option value="invisible">⚫ Invisible</option></select></label><label class="field field--grow"><span>Actividad</span><input data-presence-activity maxlength="128" value="X$ • Panel y soporte" placeholder="Ej. X$ • Panel y soporte"></label><button class="button button--primary" type="submit">Guardar presencia</button></form></article>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           LOGS
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-logs" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">📋 <span>Logs</span></div>
-            <div class="section-sub">Registro de actividad del bot</div>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="clearLogs()">🗑️ Limpiar</button>
-        </div>
-        <div class="card">
-          <div class="log-list" id="log-list">
-            <div class="log-item">
-              <div class="log-dot success"></div>
-              <span class="log-time">00:19:30</span>
-              <span class="log-text">✅ Bot conectado como X$#9130</span>
-            </div>
-            <div class="log-item">
-              <div class="log-dot info"></div>
-              <span class="log-time">00:19:30</span>
-              <span class="log-text">🔄 Slash commands sincronizados</span>
-            </div>
-          </div>
-        </div>
+      <!-- Actividad -->
+      <section class="panel-section" data-section="activity" id="activity">
+        <div class="section-head"><div><span class="eyebrow">AUDITORÍA</span><h1>Actividad del sistema</h1><p>Eventos reales registrados desde el inicio del proceso actual.</p></div><div class="section-head__actions"><button class="button button--ghost" type="button" data-refresh-logs>Actualizar</button><button class="button button--danger" type="button" data-clear-logs>Limpiar</button></div></div>
+        <article class="surface-card"><div class="activity-list" data-activity-list><p class="empty-state">Cargando actividad…</p></div></article>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           VOZ
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-voz" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">🔊 <span>Bot en Voz</span></div>
-            <div class="section-sub">Conecta o desconecta el bot de un canal de voz</div>
-          </div>
+      <!-- Configuración -->
+      <section class="panel-section" data-section="settings" id="settings">
+        <div class="section-head"><div><span class="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado del despliegue, exportación segura y recomendaciones de Railway.</p></div></div>
+        <div class="two-column">
+          <article class="surface-card settings-card"><span class="settings-card__icon">⬇</span><h2>Exportar configuración</h2><p>Descarga los límites y módulos activos. No incluye tokens, credenciales ni secretos.</p><a class="button button--outline" href="/api/settings/export">Descargar JSON</a></article>
+          <article class="surface-card settings-card"><span class="settings-card__icon">✓</span><h2>Checklist Railway</h2><ul class="check-list"><li>Node 20 fijado con <code>.nvmrc</code></li><li>Healthcheck disponible en <code>/health</code></li><li>Sin dependencias Opus nativas</li><li>Variables y sesión protegidas por entorno</li></ul></article>
         </div>
-        <div class="card">
-          <div class="card-title"><span class="icon">🔊</span> Control de Canal</div>
-          <div style="display:flex;flex-direction:column;gap:16px;">
-            <div class="form-group">
-              <label class="channel-select-label">Canal de voz</label>
-              <select id="voice-channel" class="select-field">
-                <option value="">— Seleccionar canal de voz —</option>
-                <% voiceChannels.forEach(ch => { %>
-                  <option value="<%= ch.id %>">🔊 <%= ch.name %></option>
-                <% }) %>
-              </select>
-            </div>
-            <div class="voice-row">
-              <button class="btn btn-green" onclick="connectVoice()">🔊 Conectar</button>
-              <button class="btn btn-danger" onclick="disconnectVoice()">🔇 Desconectar</button>
-              <span class="voice-status-badge disconnected" id="voice-badge">⚫ Desconectado</span>
-            </div>
-          </div>
-        </div>
+        <article class="notice notice--info">ℹ Para que anti-spam y anti-raid funcionen, habilita <b>Message Content Intent</b> y <b>Server Members Intent</b> en Discord Developer Portal, además de conceder permisos de moderación al bot.</article>
       </section>
-
-      <!-- ══════════════════════════════════════════════════════
-           BACKUP
-      ══════════════════════════════════════════════════════ -->
-      <section id="sec-backup" class="section-pane" style="display:none">
-        <div class="section-header">
-          <div>
-            <div class="section-title">💾 <span>Copia de Seguridad</span></div>
-            <div class="section-sub">Gestiona las copias de seguridad del bot</div>
-          </div>
-          <button class="btn btn-green btn-sm" onclick="createBackup()">+ Nueva Copia</button>
-        </div>
-        <div class="card">
-          <div class="card-title"><span class="icon">💾</span> Copias Disponibles</div>
-          <div class="backup-info">
-            <div class="backup-icon">💾</div>
-            <div class="backup-text">
-              <div class="backup-name">backup_config_2026-10-18.json</div>
-              <div class="backup-date">Creado: 18/10/2026 00:19 • Tamaño: 12KB</div>
-            </div>
-            <div class="backup-actions">
-              <button class="btn btn-outline btn-sm">⬇️ Descargar</button>
-              <button class="btn btn-danger btn-sm">🗑️</button>
-            </div>
-          </div>
-          <div id="backup-list"></div>
-        </div>
-      </section>
-
-    </div><!-- end page-content -->
-  </main><!-- end main -->
-
-  <!-- ═══ SCRIPTS ═══════════════════════════════════════════════ -->
-  <script>
-    // ─── Section navigation ─────────────────────────────────
-    const sections = ['inicio','embeds','editor','tickets','usuarios','seguridad','logs','voz','backup'];
-
-    function showSection(id) {
-      sections.forEach(s => {
-        document.getElementById('sec-' + s).style.display = s === id ? '' : 'none';
-        const nav = document.getElementById('nav-' + s);
-        if (nav) nav.classList.toggle('active', s === id);
-      });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // ─── Toast ───────────────────────────────────────────────
-    function toast(msg, ok = true) {
-      const container = document.getElementById('flash-container');
-      const el = document.createElement('div');
-      el.className = 'flash-toast ' + (ok ? 'ok' : 'err');
-      el.innerHTML = (ok ? '✅ ' : '❌ ') + msg;
-      container.appendChild(el);
-      setTimeout(() => el.remove(), 4000);
-    }
-
-    // ─── Send embed ──────────────────────────────────────────
-    async function sendEmbed(type) {
-      const channelId = document.getElementById('embed-channel').value;
-      if (!channelId) return toast('Selecciona un canal primero', false);
-      const r = await fetch('/api/embed/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, channelId }),
-      });
-      const d = await r.json();
-      toast(d.msg, d.ok);
-    }
-
-    // ─── Custom embed ────────────────────────────────────────
-    async function sendCustomEmbed() {
-      const channelId = document.getElementById('editor-channel').value;
-      if (!channelId) return toast('Selecciona un canal', false);
-      const data = {
-        title:   document.getElementById('e-title').value,
-        desc:    document.getElementById('e-desc').value,
-        color:   document.getElementById('e-color').value,
-        footer:  document.getElementById('e-footer').value,
-        channelId,
-      };
-      const r = await fetch('/api/embed/custom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const d = await r.json();
-      toast(d.msg, d.ok);
-    }
-
-    // Live preview editor
-    ['e-title','e-desc','e-footer','e-color'].forEach(id => {
-      document.getElementById(id)?.addEventListener('input', () => {
-        document.getElementById('prev-title').textContent  = document.getElementById('e-title').value || 'Título del embed';
-        document.getElementById('prev-desc').textContent   = document.getElementById('e-desc').value  || 'Descripción...';
-        document.getElementById('prev-footer').textContent = document.getElementById('e-footer').value;
-        const color = document.getElementById('e-color').value || '#00ff88';
-        document.getElementById('embed-preview').style.borderLeftColor = color;
-      });
-    });
-
-    // ─── Voice ───────────────────────────────────────────────
-    async function connectVoice() {
-      const channelId = document.getElementById('voice-channel').value;
-      if (!channelId) return toast('Selecciona un canal de voz', false);
-      const r = await fetch('/api/voice/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId }),
-      });
-      const d = await r.json();
-      toast(d.msg, d.ok);
-      if (d.ok) {
-        const badge = document.getElementById('voice-badge');
-        badge.textContent = '🟢 Conectado';
-        badge.className = 'voice-status-badge connected';
-      }
-    }
-
-    async function disconnectVoice() {
-      const r = await fetch('/api/voice/disconnect', { method: 'POST' });
-      const d = await r.json();
-      toast(d.msg, d.ok);
-      if (d.ok) {
-        const badge = document.getElementById('voice-badge');
-        badge.textContent = '⚫ Desconectado';
-        badge.className = 'voice-status-badge disconnected';
-      }
-    }
-
-    // ─── Security toggles ────────────────────────────────────
-    function toggleSecurity(el, module) {
-      toast(`${module} ${el.checked ? 'activado' : 'desactivado'}`, el.checked);
-    }
-
-    // ─── Logs ────────────────────────────────────────────────
-    function clearLogs() {
-      document.getElementById('log-list').innerHTML =
-        '<div class="empty-state"><span class="empty-state-icon">📋</span><span class="empty-state-text">Sin logs</span></div>';
-      toast('Logs limpiados', true);
-    }
-
-    function addLog(msg, type = 'info') {
-      const list = document.getElementById('log-list');
-      const now = new Date().toLocaleTimeString('es-CO', { hour12: false });
-      const item = document.createElement('div');
-      item.className = 'log-item';
-      item.innerHTML = `<div class="log-dot ${type}"></div><span class="log-time">${now}</span><span class="log-text">${msg}</span>`;
-      list.insertBefore(item, list.firstChild);
-    }
-
-    // ─── Backup ──────────────────────────────────────────────
-    function createBackup() {
-      const date = new Date().toISOString().slice(0,10);
-      toast(`Backup creado: backup_${date}.json`, true);
-      addLog(`💾 Copia de seguridad creada`, 'success');
-    }
-
-    // ─── Auto-refresh status ─────────────────────────────────
-    setInterval(async () => {
-      try {
-        const r = await fetch('/api/status');
-        const d = await r.json();
-        document.getElementById('tb-ping').textContent   = d.ping + 'ms';
-        document.getElementById('tb-status').textContent = d.online ? 'Online' : 'Offline';
-        document.getElementById('tb-tag').textContent    = d.tag;
-        document.getElementById('s-ping').innerHTML      = d.ping + '<span style="font-size:.9rem;color:var(--text-muted)">ms</span>';
-        // Uptime
-        const h = Math.floor(d.uptime / 3600000);
-        const m = Math.floor((d.uptime % 3600000) / 60000);
-        document.getElementById('s-uptime').textContent = h + 'h ' + m + 'm';
-      } catch {}
-    }, 10000);
-
-    // Uptime inicial
-    (async () => {
-      try {
-        const r = await fetch('/api/status');
-        const d = await r.json();
-        const h = Math.floor(d.uptime / 3600000);
-        const m = Math.floor((d.uptime % 3600000) / 60000);
-        document.getElementById('s-uptime').textContent = h + 'h ' + m + 'm';
-      } catch {}
-    })();
-  </script>
-
+    </div>
+  </main>
 </body>
 </html>

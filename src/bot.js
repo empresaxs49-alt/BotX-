@@ -1,341 +1,641 @@
-require('dotenv').config();
+'use strict';
+
 const {
-  Client, GatewayIntentBits, Partials, Collection,
-  EmbedBuilder, ActionRowBuilder, ButtonBuilder,
-  ButtonStyle, PermissionFlagsBits, ChannelType
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  Client,
+  EmbedBuilder,
+  GatewayIntentBits,
+  PermissionFlagsBits,
+  REST,
+  Routes,
 } = require('discord.js');
+const {
+  entersState,
+  joinVoiceChannel,
+  VoiceConnectionStatus,
+} = require('@discordjs/voice');
 
-const { joinVoiceChannel, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
+const DEFAULT_BLOCKED_WORDS = ['discord.gift/', 'free nitro', 'scam'];
+const MAX_AUDIT_ENTRIES = 150;
 
-// ─── CONFIG ────────────────────────────────────────────────────────
-const TOKEN     = process.env.DISCORD_TOKEN;
-const GUILD_ID  = process.env.GUILD_ID;
-const LOG_CH    = process.env.LOG_CHANNEL_ID   || null;
-const TICKET_CH = process.env.TICKET_PANEL_CH  || null;
+function asPositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
-const BLOCKED_WORDS = ['spam', 'hack', 'scam', 'free nitro', 'discord.gift.'];
-const SPAM_LIMIT    = 5;   // mensajes
-const SPAM_WINDOW   = 4000; // ms
-const RAID_JOIN_LIMIT  = 8;
-const RAID_WINDOW      = 10000;
+function safeChannelName(value) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 38) || 'usuario';
+}
 
-// ─── ESTADO ───────────────────────────────────────────────────────
-const spamMap  = new Collection(); // userId -> { count, timer }
-const raidMap  = { joins: [], locked: false };
-let   voiceConn = null;
-
-// ─── CLIENT ───────────────────────────────────────────────────────
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMessageReactions,
-  ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-});
-
-// ─── EXPORTS para web ─────────────────────────────────────────────
-function getClient() { return client; }
-function getVoiceConn() { return voiceConn; }
-function setVoiceConn(c) { voiceConn = c; }
-
-// ─── EMBEDS PREDEFINIDOS ──────────────────────────────────────────
-function buildEmbed(type) {
-  const embeds = {
-    tickets: new EmbedBuilder()
-      .setTitle('🎫 Sistema de Tickets')
-      .setDescription('¿Necesitas ayuda o quieres hacer una compra?\n\nHaz click en el botón de abajo para abrir un ticket privado.')
-      .setColor(0x00FFFF)
-      .addFields(
-        { name: '⏱️ Tiempo de respuesta', value: 'Menos de 10 minutos', inline: true },
-        { name: '🔒 Privacidad', value: 'Canal privado solo para ti', inline: true }
-      )
-      .setFooter({ text: 'X$ | Soporte 24/7' })
-      .setTimestamp(),
-
-    diamantes: new EmbedBuilder()
-      .setTitle('💎 Diamantes Free Fire')
-      .setDescription('Recarga diamantes al instante y al mejor precio del mercado.')
-      .setColor(0x00BFFF)
-      .addFields(
-        { name: '100 💎', value: '$X.XX USD', inline: true },
-        { name: '310 💎', value: '$X.XX USD', inline: true },
-        { name: '520 💎', value: '$X.XX USD', inline: true },
-        { name: '1060 💎', value: '$X.XX USD', inline: true },
-        { name: '2180 💎', value: '$X.XX USD', inline: true },
-        { name: '5600 💎', value: '$X.XX USD', inline: true }
-      )
-      .setFooter({ text: 'X$ | Diamantes al instante' })
-      .setTimestamp(),
-
-    boosts: new EmbedBuilder()
-      .setTitle('🚀 Boosts de Servidor')
-      .setDescription('Dale a tu servidor los beneficios que merece con nuestros boosts premium.')
-      .setColor(0xFF73FA)
-      .addFields(
-        { name: '1 Boost', value: 'Disponible', inline: true },
-        { name: '7 Boosts', value: 'Disponible', inline: true },
-        { name: '14 Boosts', value: 'Disponible', inline: true }
-      )
-      .setFooter({ text: 'X$ | Boosts garantizados' })
-      .setTimestamp(),
-
-    decoraciones: new EmbedBuilder()
-      .setTitle('🎨 Decoraciones de Perfil')
-      .setDescription('Personaliza tu perfil de Discord con decoraciones exclusivas.')
-      .setColor(0xFFD700)
-      .addFields(
-        { name: '✨ Animadas', value: 'Disponibles', inline: true },
-        { name: '🎭 Exclusivas', value: 'Disponibles', inline: true },
-        { name: '🏆 Premium', value: 'Disponibles', inline: true }
-      )
-      .setFooter({ text: 'X$ | Decoraciones únicas' })
-      .setTimestamp(),
-
-    metodos: new EmbedBuilder()
-      .setTitle('💳 Métodos de Pago')
-      .setDescription('Aceptamos múltiples formas de pago para tu comodidad.')
-      .setColor(0x00FF88)
-      .addFields(
-        { name: '₿ Crypto', value: 'BTC, ETH, USDT', inline: true },
-        { name: '💰 PayPal', value: 'Disponible', inline: true },
-        { name: '🏦 Transferencia', value: 'Disponible', inline: true },
-        { name: '📱 Nequi / Binance Pay', value: 'Disponible', inline: true },
-        { name: '🎮 Gift Cards', value: 'Steam, Google Play, iTunes', inline: true }
-      )
-      .setFooter({ text: 'X$ | Pago seguro y confiable' })
-      .setTimestamp(),
+function createBot() {
+  const config = {
+    token: process.env.DISCORD_TOKEN || '',
+    guildId: process.env.GUILD_ID || '',
+    supportRoleId: process.env.SUPPORT_ROLE_ID || '',
+    logChannelId: process.env.LOG_CHANNEL_ID || '',
+    blockedWords: (process.env.BLOCKED_WORDS || DEFAULT_BLOCKED_WORDS.join(','))
+      .split(',')
+      .map((word) => word.trim().toLowerCase())
+      .filter(Boolean),
+    spamLimit: asPositiveInt(process.env.SPAM_LIMIT, 5),
+    spamWindowMs: asPositiveInt(process.env.SPAM_WINDOW_MS, 4_000),
+    spamTimeoutMs: asPositiveInt(process.env.SPAM_TIMEOUT_MS, 60_000),
+    raidJoinLimit: asPositiveInt(process.env.RAID_JOIN_LIMIT, 8),
+    raidWindowMs: asPositiveInt(process.env.RAID_WINDOW_MS, 10_000),
+    raidLockMs: asPositiveInt(process.env.RAID_LOCK_MS, 30_000),
   };
-  return embeds[type] || null;
-}
 
-// ─── READY ────────────────────────────────────────────────────────
-client.once('ready', async () => {
-  console.log(`[✓] Bot online: ${client.user.tag}`);
-  client.user.setPresence({
-    status: 'online',
-    activities: [{ name: '⚡ X$ | Lo mejor en venta de cheats 🔥', type: 3 }],
-  });
-  await registerSlashCommands();
-});
+  const protection = {
+    antiSpam: true,
+    antiRaid: true,
+    wordFilter: true,
+    moderationLogs: true,
+  };
+  const auditLog = [];
+  const ticketOwners = new Map();
+  const spamBuckets = new Map();
+  const raidWindows = new Map();
+  const previousVerificationLevels = new Map();
 
-// ─── SLASH COMMANDS ───────────────────────────────────────────────
-async function registerSlashCommands() {
-  const { REST, Routes } = require('discord.js');
-  const commands = [
-    { name: 'tickets',      description: 'Enviar panel de tickets' },
-    { name: 'diamantes',    description: 'Enviar panel de diamantes' },
-    { name: 'boosts',       description: 'Enviar panel de boosts' },
-    { name: 'decoraciones', description: 'Enviar panel de decoraciones' },
-    { name: 'metodos',      description: 'Enviar métodos de pago' },
-    { name: 'ping',         description: 'Latencia del bot' },
-    { name: 'cerrarticket', description: 'Cerrar ticket actual' },
-  ];
-  try {
-    const rest = new REST({ version: '10' }).setToken(TOKEN);
-    await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
-    console.log('[✓] Slash commands registrados');
-  } catch (e) {
-    console.error('[✗] Error registrando comandos:', e.message);
-  }
-}
+  let voiceConnection = null;
+  let loginRetry = null;
+  let lastError = null;
+  let isStarting = false;
 
-// ─── INTERACTION HANDLER ──────────────────────────────────────────
-client.on('interactionCreate', async (interaction) => {
-  // Slash commands
-  if (interaction.isChatInputCommand()) {
-    const { commandName, channel } = interaction;
-
-    if (['tickets','diamantes','boosts','decoraciones','metodos'].includes(commandName)) {
-      const embed = buildEmbed(commandName);
-      const row = commandName === 'tickets'
-        ? new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('abrir_ticket').setLabel('🎫 Abrir Ticket').setStyle(ButtonStyle.Primary)
-          )
-        : null;
-      await interaction.reply({ embeds: [embed], components: row ? [row] : [] });
-    }
-
-    if (commandName === 'ping') {
-      await interaction.reply({ content: `🏓 Pong! \`${Math.round(client.ws.ping)}ms\``, ephemeral: true });
-    }
-
-    if (commandName === 'cerrarticket') {
-      if (channel.name?.startsWith('ticket-')) {
-        await interaction.reply({ content: '🔒 Cerrando ticket en 3 segundos...' });
-        setTimeout(() => channel.delete().catch(() => {}), 3000);
-      } else {
-        await interaction.reply({ content: '❌ Este no es un canal de ticket.', ephemeral: true });
-      }
-    }
-  }
-
-  // Botón abrir ticket
-  if (interaction.isButton() && interaction.customId === 'abrir_ticket') {
-    await crearTicket(interaction);
-  }
-});
-
-// ─── SISTEMA DE TICKETS ───────────────────────────────────────────
-async function crearTicket(interaction) {
-  const guild = interaction.guild;
-  const user  = interaction.user;
-  const existing = guild.channels.cache.find(c => c.name === `ticket-${user.username.toLowerCase()}`);
-
-  if (existing) {
-    return interaction.reply({ content: `Ya tienes un ticket abierto: ${existing}`, ephemeral: true });
-  }
-
-  const channel = await guild.channels.create({
-    name: `ticket-${user.username.toLowerCase()}`,
-    type: ChannelType.GuildText,
-    permissionOverwrites: [
-      { id: guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
-      { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-      { id: client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+  const client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildVoiceStates,
     ],
   });
 
-  const embed = new EmbedBuilder()
-    .setTitle('🎫 Ticket Abierto')
-    .setDescription(`Hola ${user}! Un staff te atenderá pronto.\n\nDescribe tu consulta o pedido.`)
-    .setColor(0x00FFFF)
-    .setFooter({ text: 'X$ | Usa /cerrarticket para cerrar' })
-    .setTimestamp();
+  function writeAudit(level, message, details = {}) {
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      time: new Date().toISOString(),
+      level,
+      message,
+      details,
+    };
+    auditLog.unshift(entry);
+    auditLog.splice(MAX_AUDIT_ENTRIES);
+    console.log(`[${level.toUpperCase()}] ${message}`);
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('cerrar_ticket_btn').setLabel('🔒 Cerrar Ticket').setStyle(ButtonStyle.Danger)
-  );
-
-  await channel.send({ content: `${user}`, embeds: [embed], components: [row] });
-  await interaction.reply({ content: `✅ Ticket creado: ${channel}`, ephemeral: true });
-  logAction(guild, `🎫 Ticket creado por ${user.tag} → ${channel.name}`);
-}
-
-// Cerrar ticket via botón
-client.on('interactionCreate', async (interaction) => {
-  if (interaction.isButton() && interaction.customId === 'cerrar_ticket_btn') {
-    if (interaction.channel.name?.startsWith('ticket-')) {
-      await interaction.reply({ content: '🔒 Cerrando en 3 segundos...' });
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
+    if (protection.moderationLogs && config.logChannelId && client.isReady()) {
+      const channel = client.channels.cache.get(config.logChannelId);
+      if (channel?.isTextBased() && typeof channel.send === 'function') {
+        channel.send({ content: `\`${new Date().toLocaleTimeString('es-CO')}\` ${message}` }).catch(() => {});
+      }
     }
-  }
-});
-
-// ─── ANTI-SPAM ────────────────────────────────────────────────────
-client.on('messageCreate', async (msg) => {
-  if (msg.author.bot || !msg.guild) return;
-
-  // Filtro de palabras
-  const content = msg.content.toLowerCase();
-  if (BLOCKED_WORDS.some(w => content.includes(w))) {
-    await msg.delete().catch(() => {});
-    const warn = await msg.channel.send(`⚠️ ${msg.author}, mensaje eliminado por contenido no permitido.`);
-    setTimeout(() => warn.delete().catch(() => {}), 5000);
-    logAction(msg.guild, `🚫 Mensaje eliminado de ${msg.author.tag}: "${msg.content.slice(0,50)}"`);
-    return;
+    return entry;
   }
 
-  // Anti-spam
-  const userId = msg.author.id;
-  if (!spamMap.has(userId)) {
-    spamMap.set(userId, { count: 1, timer: setTimeout(() => spamMap.delete(userId), SPAM_WINDOW) });
-  } else {
-    const data = spamMap.get(userId);
-    data.count++;
-    if (data.count >= SPAM_LIMIT) {
-      clearTimeout(data.timer);
-      spamMap.delete(userId);
-      try {
-        await msg.member.timeout(60000, 'Anti-spam automático');
-        const warn = await msg.channel.send(`🔇 ${msg.author} silenciado por 60s por spam.`);
-        setTimeout(() => warn.delete().catch(() => {}), 7000);
-        logAction(msg.guild, `🔇 ${msg.author.tag} muteado por spam`);
-      } catch {}
+  function getGuild() {
+    return config.guildId ? client.guilds.cache.get(config.guildId) || null : null;
+  }
+
+  function isReady() {
+    return client.isReady();
+  }
+
+  function getVoiceSummary() {
+    if (!voiceConnection || voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
+      return { connected: false, channelId: null, channelName: null };
     }
+    const guild = getGuild();
+    const channel = guild?.channels.cache.get(voiceConnection.joinConfig.channelId);
+    return {
+      connected: voiceConnection.state.status === VoiceConnectionStatus.Ready,
+      channelId: channel?.id || null,
+      channelName: channel?.name || null,
+    };
   }
-});
 
-// ─── ANTI-RAID ────────────────────────────────────────────────────
-client.on('guildMemberAdd', async (member) => {
-  const now = Date.now();
-  raidMap.joins = raidMap.joins.filter(t => now - t < RAID_WINDOW);
-  raidMap.joins.push(now);
+  function getOverview() {
+    const guild = getGuild();
+    const textChannels = guild
+      ? guild.channels.cache
+          .filter((channel) => channel.isTextBased() && typeof channel.send === 'function')
+          .map((channel) => ({ id: channel.id, name: channel.name }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+    const voiceChannels = guild
+      ? guild.channels.cache
+          .filter((channel) => channel.type === ChannelType.GuildVoice || channel.type === ChannelType.GuildStageVoice)
+          .map((channel) => ({ id: channel.id, name: channel.name, type: channel.type === ChannelType.GuildStageVoice ? 'stage' : 'voice' }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      : [];
 
-  if (raidMap.joins.length >= RAID_JOIN_LIMIT && !raidMap.locked) {
-    raidMap.locked = true;
-    const guild = member.guild;
-    try {
-      await guild.setVerificationLevel(4);
-      logAction(guild, `🛡️ RAID DETECTADO — Verificación máxima activada. ${raidMap.joins.length} joins en ${RAID_WINDOW/1000}s`);
-    } catch {}
-    setTimeout(async () => {
-      try { await guild.setVerificationLevel(1); } catch {}
-      raidMap.locked = false;
-      raidMap.joins  = [];
-    }, 30000);
+    return {
+      ready: isReady(),
+      botTag: client.user?.tag || 'Conectando…',
+      botId: client.user?.id || null,
+      ping: client.ws.ping > 0 ? Math.round(client.ws.ping) : 0,
+      uptime: client.uptime || 0,
+      guild: guild
+        ? { id: guild.id, name: guild.name, memberCount: guild.memberCount }
+        : null,
+      tickets: getTickets(),
+      ticketCount: getTickets().length,
+      textChannels,
+      voiceChannels,
+      voice: getVoiceSummary(),
+      protection: { ...protection },
+      lastError,
+    };
   }
-});
 
-// ─── VOZ: conectar / desconectar desde web ────────────────────────
-async function connectVoice(channelId) {
-  try {
-    const guild   = client.guilds.cache.get(GUILD_ID);
-    const channel = guild?.channels.cache.get(channelId);
-    if (!channel || channel.type !== ChannelType.GuildVoice) return { ok: false, msg: 'Canal no encontrado' };
+  function getLogs(limit = 80) {
+    return auditLog.slice(0, Math.max(1, Math.min(limit, MAX_AUDIT_ENTRIES)));
+  }
 
-    if (voiceConn) { voiceConn.destroy(); voiceConn = null; }
+  function clearLogs() {
+    auditLog.length = 0;
+    writeAudit('info', 'Registro de actividad limpiado desde el panel.');
+  }
 
-    voiceConn = joinVoiceChannel({
-      channelId: channel.id,
-      guildId:   guild.id,
-      adapterCreator: guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: true,
+  function getTicketOwnerFromChannel(channel) {
+    if (ticketOwners.has(channel.id)) return ticketOwners.get(channel.id);
+    const match = typeof channel.topic === 'string' ? channel.topic.match(/^ticket-owner:(\d+)/) : null;
+    return match?.[1] || null;
+  }
+
+  function getTickets() {
+    const guild = getGuild();
+    if (!guild) return [];
+
+    return guild.channels.cache
+      .filter((channel) => channel.type === ChannelType.GuildText && channel.name.startsWith('ticket-'))
+      .map((channel) => ({
+        id: channel.id,
+        name: channel.name,
+        ownerId: getTicketOwnerFromChannel(channel),
+        createdAt: channel.createdAt?.toISOString() || null,
+      }))
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  function isStaff(member) {
+    if (!member) return false;
+    if (member.permissions?.has(PermissionFlagsBits.ManageChannels)) return true;
+    return Boolean(config.supportRoleId && member.roles?.cache?.has(config.supportRoleId));
+  }
+
+  function buildEmbed(type) {
+    const common = (embed) => embed.setFooter({ text: 'X$ • Atención segura y rápida' }).setTimestamp();
+    const embeds = {
+      tickets: common(
+        new EmbedBuilder()
+          .setColor(0x00ff88)
+          .setTitle('🎫 Centro de soporte')
+          .setDescription('Abre un ticket privado para recibir atención del equipo.')
+          .addFields(
+            { name: '🔐 Privado', value: 'Solo tú y el equipo autorizado podrán verlo.', inline: true },
+            { name: '⚡ Respuesta', value: 'El staff será notificado al abrirlo.', inline: true },
+          ),
+      ),
+      diamantes: common(
+        new EmbedBuilder()
+          .setColor(0x00d9ff)
+          .setTitle('💎 Catálogo de diamantes')
+          .setDescription('Consulta disponibilidad y crea un ticket para recibir atención.')
+          .addFields(
+            { name: 'Recargas', value: 'Opciones disponibles bajo consulta.', inline: true },
+            { name: 'Entrega', value: 'Confirmación con el equipo de soporte.', inline: true },
+          ),
+      ),
+      boosts: common(
+        new EmbedBuilder()
+          .setColor(0x8b5cf6)
+          .setTitle('🚀 Boosts de servidor')
+          .setDescription('Consulta los planes disponibles para impulsar tu comunidad.')
+          .addFields({ name: 'Estado', value: 'Solicita información por ticket.', inline: true }),
+      ),
+      decoraciones: common(
+        new EmbedBuilder()
+          .setColor(0xfbbf24)
+          .setTitle('🎨 Decoraciones y perfiles')
+          .setDescription('Personaliza tu perfil con opciones disponibles del catálogo.')
+          .addFields({ name: 'Catálogo', value: 'Abre un ticket para conocer las opciones.', inline: true }),
+      ),
+      metodos: common(
+        new EmbedBuilder()
+          .setColor(0x00ff88)
+          .setTitle('💳 Métodos de pago')
+          .setDescription('El equipo confirmará los métodos y la información de pago dentro de un ticket.')
+          .addFields({ name: 'Importante', value: 'Verifica siempre la identidad del staff antes de pagar.', inline: false }),
+      ),
+    };
+    return embeds[type] || null;
+  }
+
+  function ticketComponents() {
+    return [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket:create')
+          .setLabel('Abrir ticket')
+          .setEmoji('🎫')
+          .setStyle(ButtonStyle.Success),
+      ),
+    ];
+  }
+
+  async function sendPredefinedEmbed(type, channelId) {
+    const guild = getGuild();
+    if (!guild) return { ok: false, message: 'El bot aún no está conectado al servidor configurado.' };
+    const channel = guild.channels.cache.get(channelId);
+    const embed = buildEmbed(type);
+
+    if (!embed) return { ok: false, message: 'El tipo de embed no es válido.' };
+    if (!channel?.isTextBased() || typeof channel.send !== 'function') {
+      return { ok: false, message: 'Selecciona un canal de texto válido.' };
+    }
+
+    await channel.send({ embeds: [embed], components: type === 'tickets' ? ticketComponents() : [] });
+    writeAudit('success', `Embed «${type}» enviado a #${channel.name}.`);
+    return { ok: true, message: `Embed enviado a #${channel.name}.` };
+  }
+
+  async function sendCustomEmbed({ channelId, title, description, color, footer }) {
+    const guild = getGuild();
+    if (!guild) return { ok: false, message: 'El bot aún no está conectado al servidor configurado.' };
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel?.isTextBased() || typeof channel.send !== 'function') {
+      return { ok: false, message: 'Selecciona un canal de texto válido.' };
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(color)
+      .setTimestamp();
+    if (title) embed.setTitle(title);
+    if (description) embed.setDescription(description);
+    if (footer) embed.setFooter({ text: footer });
+
+    await channel.send({ embeds: [embed] });
+    writeAudit('success', `Embed personalizado enviado a #${channel.name}.`);
+    return { ok: true, message: `Embed enviado a #${channel.name}.` };
+  }
+
+  async function createTicket(interaction) {
+    const guild = interaction.guild;
+    const user = interaction.user;
+    if (!guild) return interaction.reply({ content: 'Este botón solo funciona dentro de un servidor.', ephemeral: true });
+
+    const existing = guild.channels.cache.find((channel) =>
+      channel.type === ChannelType.GuildText &&
+      channel.name.startsWith('ticket-') &&
+      getTicketOwnerFromChannel(channel) === user.id,
+    );
+    if (existing) {
+      return interaction.reply({ content: `Ya tienes un ticket abierto: ${existing}.`, ephemeral: true });
+    }
+
+    const permissionOverwrites = [
+      { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+      {
+        id: user.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      },
+      {
+        id: client.user.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      },
+    ];
+    if (config.supportRoleId) {
+      permissionOverwrites.push({
+        id: config.supportRoleId,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      });
+    }
+
+    const channel = await guild.channels.create({
+      name: `ticket-${safeChannelName(user.username)}-${user.id.slice(-4)}`,
+      type: ChannelType.GuildText,
+      topic: `ticket-owner:${user.id}`,
+      permissionOverwrites,
+      reason: `Ticket creado por ${user.tag}`,
     });
+    ticketOwners.set(channel.id, user.id);
 
-    await entersState(voiceConn, VoiceConnectionStatus.Ready, 10_000);
-    voiceConn.on(VoiceConnectionStatus.Disconnected, () => { voiceConn = null; });
-    return { ok: true, msg: `Conectado a ${channel.name}` };
-  } catch (e) {
-    return { ok: false, msg: e.message };
+    const intro = new EmbedBuilder()
+      .setColor(0x00ff88)
+      .setTitle('🎫 Ticket abierto')
+      .setDescription(`Hola ${user}. Describe tu solicitud y el equipo te atenderá pronto.`)
+      .setFooter({ text: 'Usa el botón para cerrar cuando termines.' })
+      .setTimestamp();
+    const controls = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket:close')
+        .setLabel('Cerrar ticket')
+        .setEmoji('🔒')
+        .setStyle(ButtonStyle.Danger),
+    );
+    await channel.send({ content: `${user}`, embeds: [intro], components: [controls] });
+    await interaction.reply({ content: `✅ Ticket creado: ${channel}.`, ephemeral: true });
+    writeAudit('success', `Ticket ${channel.name} creado por ${user.tag}.`);
   }
-}
 
-function disconnectVoice() {
-  if (voiceConn) {
-    voiceConn.destroy();
-    voiceConn = null;
-    return { ok: true, msg: 'Desconectado del canal de voz' };
+  async function closeTicket(channelId, actor = 'Panel web') {
+    const guild = getGuild();
+    const channel = guild?.channels.cache.get(channelId);
+    if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith('ticket-')) {
+      return { ok: false, message: 'El ticket ya no existe o no es válido.' };
+    }
+    const name = channel.name;
+    await channel.delete(`Ticket cerrado por ${actor}`);
+    ticketOwners.delete(channelId);
+    writeAudit('info', `Ticket ${name} cerrado por ${actor}.`);
+    return { ok: true, message: `Ticket ${name} cerrado.` };
   }
-  return { ok: false, msg: 'No está conectado a ningún canal' };
-}
 
-// ─── RECONEXIÓN AUTOMÁTICA ────────────────────────────────────────
-client.on('shardError',        e  => console.error('[Shard Error]', e.message));
-client.on('shardDisconnect',   () => console.log('[!] Shard desconectado, reconectando...'));
-client.on('shardReconnecting', () => console.log('[~] Reconectando...'));
-client.on('shardResume',       () => console.log('[✓] Reconectado'));
+  async function connectVoice(channelId) {
+    const guild = getGuild();
+    const channel = guild?.channels.cache.get(channelId);
+    if (!channel || ![ChannelType.GuildVoice, ChannelType.GuildStageVoice].includes(channel.type)) {
+      return { ok: false, message: 'Selecciona un canal de voz válido.' };
+    }
 
-// ─── LOG ──────────────────────────────────────────────────────────
-function logAction(guild, msg) {
-  console.log(`[LOG] ${msg}`);
-  if (LOG_CH) {
-    const ch = guild.channels.cache.get(LOG_CH);
-    if (ch) ch.send(`\`${new Date().toLocaleTimeString()}\` ${msg}`).catch(() => {});
+    try {
+      if (voiceConnection) {
+        voiceConnection.destroy();
+        voiceConnection = null;
+      }
+      voiceConnection = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: guild.id,
+        adapterCreator: guild.voiceAdapterCreator,
+        selfDeaf: true,
+        selfMute: true,
+      });
+      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 15_000);
+      voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
+        writeAudit('warning', 'La conexión de voz se desconectó.');
+        try {
+          await Promise.race([
+            entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
+            entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
+          ]);
+        } catch {
+          voiceConnection?.destroy();
+          voiceConnection = null;
+        }
+      });
+      writeAudit('success', `Bot conectado al canal de voz «${channel.name}».`);
+      return { ok: true, message: `Conectado a «${channel.name}».`, voice: getVoiceSummary() };
+    } catch (error) {
+      voiceConnection?.destroy();
+      voiceConnection = null;
+      writeAudit('error', `No se pudo conectar a voz: ${error.message}`);
+      return { ok: false, message: 'No fue posible conectar a ese canal de voz.' };
+    }
   }
-}
 
-// ─── START ────────────────────────────────────────────────────────
-function startBot() {
-  client.login(TOKEN).catch(e => {
-    console.error('[✗] Login fallido:', e.message);
-    setTimeout(startBot, 5000);
+  function disconnectVoice() {
+    if (!voiceConnection) return { ok: false, message: 'El bot no está conectado a voz.' };
+    voiceConnection.destroy();
+    voiceConnection = null;
+    writeAudit('info', 'Bot desconectado del canal de voz desde el panel.');
+    return { ok: true, message: 'Bot desconectado del canal de voz.', voice: getVoiceSummary() };
+  }
+
+  function updateSecurity(module, enabled) {
+    if (!Object.hasOwn(protection, module) || typeof enabled !== 'boolean') {
+      return { ok: false, message: 'Módulo de seguridad inválido.' };
+    }
+    protection[module] = enabled;
+    writeAudit('info', `${module} ${enabled ? 'activado' : 'desactivado'} desde el panel.`);
+    return { ok: true, message: `${module} ${enabled ? 'activado' : 'desactivado'}.`, protection: { ...protection } };
+  }
+
+  function updatePresence({ status, activity }) {
+    if (!isReady()) return { ok: false, message: 'El bot aún no está conectado.' };
+    const allowedStatuses = new Set(['online', 'idle', 'dnd', 'invisible']);
+    const cleanActivity = String(activity || '').trim().slice(0, 128);
+    const safeStatus = allowedStatuses.has(status) ? status : 'online';
+    client.user.setPresence({
+      status: safeStatus,
+      activities: cleanActivity ? [{ name: cleanActivity, type: 3 }] : [],
+    });
+    writeAudit('success', 'Presencia del bot actualizada desde el panel.');
+    return { ok: true, message: 'Presencia actualizada.' };
+  }
+
+  function exportSettings() {
+    return {
+      exportedAt: new Date().toISOString(),
+      protection: { ...protection },
+      limits: {
+        spamLimit: config.spamLimit,
+        spamWindowMs: config.spamWindowMs,
+        raidJoinLimit: config.raidJoinLimit,
+        raidWindowMs: config.raidWindowMs,
+      },
+      blockedWords: [...config.blockedWords],
+    };
+  }
+
+  async function registerCommands() {
+    if (!config.token || !config.guildId || !client.user) return;
+    const commands = [
+      { name: 'tickets', description: 'Enviar el panel de tickets' },
+      { name: 'diamantes', description: 'Enviar el embed de diamantes' },
+      { name: 'boosts', description: 'Enviar el embed de boosts' },
+      { name: 'decoraciones', description: 'Enviar el embed de decoraciones' },
+      { name: 'metodos', description: 'Enviar el embed de métodos de pago' },
+      { name: 'ping', description: 'Mostrar la latencia del bot' },
+      { name: 'cerrarticket', description: 'Cerrar el ticket actual' },
+    ];
+    try {
+      const rest = new REST({ version: '10' }).setToken(config.token);
+      await rest.put(Routes.applicationGuildCommands(client.user.id, config.guildId), { body: commands });
+      writeAudit('success', 'Comandos slash sincronizados.');
+    } catch (error) {
+      writeAudit('warning', `No se pudieron sincronizar comandos: ${error.message}`);
+    }
+  }
+
+  client.once('ready', async () => {
+    lastError = null;
+    isStarting = false;
+    client.user.setPresence({
+      status: 'online',
+      activities: [{ name: 'X$ • Panel y soporte', type: 3 }],
+    });
+    writeAudit('success', `Bot conectado como ${client.user.tag}.`);
+    await registerCommands();
   });
+
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isButton()) {
+        if (interaction.customId === 'ticket:create') return createTicket(interaction);
+        if (interaction.customId === 'ticket:close') {
+          const ownerId = getTicketOwnerFromChannel(interaction.channel);
+          if (interaction.user.id !== ownerId && !isStaff(interaction.member)) {
+            return interaction.reply({ content: 'No tienes permiso para cerrar este ticket.', ephemeral: true });
+          }
+          await interaction.reply({ content: '🔒 Cerrando ticket…', ephemeral: true });
+          setTimeout(() => closeTicket(interaction.channel.id, interaction.user.tag).catch(() => {}), 1_500);
+          return;
+        }
+      }
+
+      if (!interaction.isChatInputCommand()) return;
+      const command = interaction.commandName;
+      if (['tickets', 'diamantes', 'boosts', 'decoraciones', 'metodos'].includes(command)) {
+        const embed = buildEmbed(command);
+        return interaction.reply({ embeds: [embed], components: command === 'tickets' ? ticketComponents() : [] });
+      }
+      if (command === 'ping') {
+        return interaction.reply({ content: `🏓 Pong: \`${Math.round(client.ws.ping)}ms\``, ephemeral: true });
+      }
+      if (command === 'cerrarticket') {
+        if (!interaction.channel?.name?.startsWith('ticket-')) {
+          return interaction.reply({ content: 'Este comando solo funciona dentro de un ticket.', ephemeral: true });
+        }
+        const ownerId = getTicketOwnerFromChannel(interaction.channel);
+        if (interaction.user.id !== ownerId && !isStaff(interaction.member)) {
+          return interaction.reply({ content: 'No tienes permiso para cerrar este ticket.', ephemeral: true });
+        }
+        await interaction.reply({ content: '🔒 Cerrando ticket…', ephemeral: true });
+        setTimeout(() => closeTicket(interaction.channel.id, interaction.user.tag).catch(() => {}), 1_500);
+      }
+    } catch (error) {
+      writeAudit('error', `Error procesando interacción: ${error.message}`);
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        interaction.reply({ content: 'Ocurrió un error al procesar la acción.', ephemeral: true }).catch(() => {});
+      }
+    }
+  });
+
+  client.on('messageCreate', async (message) => {
+    if (message.author.bot || !message.guild) return;
+    const key = `${message.guild.id}:${message.author.id}`;
+    const content = message.content.toLowerCase();
+
+    if (protection.wordFilter && config.blockedWords.some((word) => content.includes(word))) {
+      await message.delete().catch(() => {});
+      const notice = await message.channel.send({ content: `⚠️ ${message.author}, ese contenido no está permitido.` }).catch(() => null);
+      if (notice) setTimeout(() => notice.delete().catch(() => {}), 5_000);
+      writeAudit('warning', `Filtro de palabras eliminó un mensaje de ${message.author.tag}.`);
+      return;
+    }
+
+    if (!protection.antiSpam) return;
+    const bucket = spamBuckets.get(key);
+    if (!bucket) {
+      spamBuckets.set(key, { count: 1, timeout: setTimeout(() => spamBuckets.delete(key), config.spamWindowMs) });
+      return;
+    }
+    bucket.count += 1;
+    if (bucket.count < config.spamLimit) return;
+
+    clearTimeout(bucket.timeout);
+    spamBuckets.delete(key);
+    try {
+      await message.member.timeout(config.spamTimeoutMs, 'Anti-spam automático');
+      writeAudit('warning', `${message.author.tag} fue silenciado por anti-spam.`);
+    } catch (error) {
+      writeAudit('warning', `No se pudo aplicar anti-spam a ${message.author.tag}: faltan permisos.`);
+    }
+  });
+
+  client.on('guildMemberAdd', async (member) => {
+    if (!protection.antiRaid) return;
+    const guildId = member.guild.id;
+    const now = Date.now();
+    const state = raidWindows.get(guildId) || { joins: [], locked: false };
+    state.joins = state.joins.filter((timestamp) => now - timestamp < config.raidWindowMs);
+    state.joins.push(now);
+    raidWindows.set(guildId, state);
+
+    if (state.locked || state.joins.length < config.raidJoinLimit) return;
+    state.locked = true;
+    try {
+      previousVerificationLevels.set(guildId, member.guild.verificationLevel);
+      await member.guild.setVerificationLevel(4, 'Anti-raid automático');
+      writeAudit('warning', `Anti-raid activado: ${state.joins.length} entradas rápidas detectadas.`);
+      setTimeout(async () => {
+        try {
+          const previous = previousVerificationLevels.get(guildId);
+          if (previous !== undefined) await member.guild.setVerificationLevel(previous, 'Restauración anti-raid');
+          writeAudit('info', 'Nivel de verificación restaurado después de anti-raid.');
+        } catch (error) {
+          writeAudit('warning', `No se pudo restaurar la verificación: ${error.message}`);
+        } finally {
+          previousVerificationLevels.delete(guildId);
+          raidWindows.set(guildId, { joins: [], locked: false });
+        }
+      }, config.raidLockMs);
+    } catch (error) {
+      state.locked = false;
+      writeAudit('warning', `No se pudo activar anti-raid: faltan permisos de Gestionar servidor.`);
+    }
+  });
+
+  client.on('error', (error) => {
+    lastError = error.message;
+    writeAudit('error', `Discord reportó un error: ${error.message}`);
+  });
+  client.on('shardReconnecting', () => writeAudit('warning', 'Discord está reconectando…'));
+  client.on('shardResume', () => writeAudit('success', 'Conexión con Discord restaurada.'));
+
+  async function start() {
+    if (isStarting || client.isReady()) return;
+    if (!config.token) {
+      lastError = 'Falta DISCORD_TOKEN en las variables de Railway.';
+      writeAudit('error', lastError);
+      return;
+    }
+    isStarting = true;
+    try {
+      await client.login(config.token);
+    } catch (error) {
+      isStarting = false;
+      lastError = error.message;
+      writeAudit('error', `No se pudo iniciar sesión en Discord: ${error.message}`);
+      clearTimeout(loginRetry);
+      loginRetry = setTimeout(() => start().catch(() => {}), 15_000);
+    }
+  }
+
+  async function stop() {
+    clearTimeout(loginRetry);
+    if (voiceConnection) voiceConnection.destroy();
+    voiceConnection = null;
+    client.destroy();
+  }
+
+  return {
+    start,
+    stop,
+    getOverview,
+    getLogs,
+    clearLogs,
+    getTickets,
+    sendPredefinedEmbed,
+    sendCustomEmbed,
+    closeTicket,
+    connectVoice,
+    disconnectVoice,
+    updateSecurity,
+    updatePresence,
+    exportSettings,
+  };
 }
 
-module.exports = { startBot, getClient, connectVoice, disconnectVoice, buildEmbed };
+module.exports = { createBot };
