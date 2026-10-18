@@ -194,64 +194,168 @@ function createBot() {
     return Boolean(config.supportRoleId && member.roles?.cache?.has(config.supportRoleId));
   }
 
-  function buildEmbed(type) {
-    const common = (embed) => embed.setFooter({ text: 'X$ • Atención segura y rápida' }).setTimestamp();
-    const embeds = {
-      tickets: common(
-        new EmbedBuilder()
-          .setColor(0x00ff88)
-          .setTitle('🎫 Centro de soporte')
-          .setDescription('Abre un ticket privado para recibir atención del equipo.')
-          .addFields(
-            { name: '🔐 Privado', value: 'Solo tú y el equipo autorizado podrán verlo.', inline: true },
-            { name: '⚡ Respuesta', value: 'El staff será notificado al abrirlo.', inline: true },
-          ),
-      ),
-      diamantes: common(
-        new EmbedBuilder()
-          .setColor(0x00d9ff)
-          .setTitle('💎 Catálogo de diamantes')
-          .setDescription('Consulta disponibilidad y crea un ticket para recibir atención.')
-          .addFields(
-            { name: 'Recargas', value: 'Opciones disponibles bajo consulta.', inline: true },
-            { name: 'Entrega', value: 'Confirmación con el equipo de soporte.', inline: true },
-          ),
-      ),
-      boosts: common(
-        new EmbedBuilder()
-          .setColor(0x8b5cf6)
-          .setTitle('🚀 Boosts de servidor')
-          .setDescription('Consulta los planes disponibles para impulsar tu comunidad.')
-          .addFields({ name: 'Estado', value: 'Solicita información por ticket.', inline: true }),
-      ),
-      decoraciones: common(
-        new EmbedBuilder()
-          .setColor(0xfbbf24)
-          .setTitle('🎨 Decoraciones y perfiles')
-          .setDescription('Personaliza tu perfil con opciones disponibles del catálogo.')
-          .addFields({ name: 'Catálogo', value: 'Abre un ticket para conocer las opciones.', inline: true }),
-      ),
-      metodos: common(
-        new EmbedBuilder()
-          .setColor(0x00ff88)
-          .setTitle('💳 Métodos de pago')
-          .setDescription('El equipo confirmará los métodos y la información de pago dentro de un ticket.')
-          .addFields({ name: 'Importante', value: 'Verifica siempre la identidad del staff antes de pagar.', inline: false }),
-      ),
-    };
-    return embeds[type] || null;
+  // ─── Embeds predefinidos editables ────────────────────────────
+  // Se almacenan como datos planos para poder editarlos desde el panel.
+  const LOGO_URL = 'https://cdn.discordapp.com/attachments/1477078368837964111/1356633862196473938/gif_1.gif';
+  const BANNER_URL = 'https://cdn.discordapp.com/attachments/1477078368837964111/1356633861827108864/DKTl8K1.gif';
+
+  const embedTemplates = {
+    tickets: {
+      color: 0x2b2d31,
+      author: { name: 'Bienvenido a x$', iconURL: LOGO_URL },
+      title: '**¡Bienvenido al sistema de atencion de tickets!**',
+      description:
+        '¿Tienes dudas, problemas o quieres obtener uno de nuestros productos?\n' +
+        'Abre un ticket y recibe atención personalizada por parte de nuestro equipo\n' +
+        '¡Estamos listos para ayudarte y brindarte la mejor experiencia!',
+      thumbnail: LOGO_URL,
+      image: BANNER_URL,
+      footer: { text: 'Copyright © 2026 | x$', iconURL: LOGO_URL },
+      buttons: [
+        { id: 'ticket:buy', label: 'Comprar', emoji: '💰', style: 'Success' },
+        { id: 'ticket:support', label: 'Soporte', emoji: '🛠️', style: 'Danger' },
+        { id: 'ticket:question', label: 'Consulta', emoji: '📋', style: 'Primary' },
+      ],
+    },
+    boosts: {
+      color: 0x2b2d31,
+      title: '**x$ Beneficios**',
+      description:
+        '<a:goldsssa:1559619455406055434> ¿Qué gano si doy mejoras al servidor?\n\n' +
+        'Ten en cuenta que al realizar un número de boosteos en el servidor, podrás recibir nuestros productos ¡COMPLETAMENTE GRATIS!\n\n' +
+        '**2 Boost = Panel Boost x7 días.**\n' +
+        '**4 Boost = Panel Boost x12 días.**\n' +
+        '**6 Boost = Panel Boost x40 días.**\n\n' +
+        'Recuerda reclamar tu premio abriendo un ticket\n' +
+        '<a:goldsssa:1559619455406055434> # 🔗 · tickets',
+      image: BANNER_URL,
+      footer: { text: 'Copyright © 2026 | x$', iconURL: LOGO_URL },
+    },
+    panelpremium: {
+      color: 0x2b2d31,
+      title: '<a:goldsssa:1559619455406055434>  **PANEL PREMIUM x$**',
+      description:
+        '» **Fake Lag V1**\t\t\t» **Sniper Scope**\n' +
+        '» **Fake Lag V2**\t\t\t» **No Reload**\n' +
+        '» **Fake Lag V2.1**\t\t» **Movement 360**\n' +
+        '» **Ghost Mode**\t\t\t» **Modo Noche**\n' +
+        '» **ESP – Chams**\t\t» **Vision Hack**\n' +
+        '» **Bug Cámara**\t\t\t» **Fake Damage**\n' +
+        '» **No Recoil**\t\t\t\t» **Mira Bonito**\n' +
+        '» **Cambio rápido**\t\t» **Fly P64 – x86**\n' +
+        '» **Rapid Fire**\t\t\t\t» **WallHack P64 – x86**\n' +
+        '» **Fly N32**\t\t\t\t\t» **WallHack N32**\n' +
+        '» **High Jump**\t\t\t\t» **Fly TP**\n' +
+        '» **Aimbot Neck**\t\t\t» **Aimbot IA**\n' +
+        '» **Aimbot Rage**\t\t\t» **Aimbot Pro**\n\n' +
+        'Abre un ticket y recibe atención personalizada por parte de nuestro equipo\n\n' +
+        '# 🔗 · tickets',
+      image: BANNER_URL,
+      footer: { text: 'Copyright © 2026 | x$', iconURL: LOGO_URL },
+    },
+    panelbasico: {
+      color: 0x2b2d31,
+      title: '<a:goldsssa:1559619455406055434>  **PANEL BASICO x$**',
+      description:
+        '» **Fake Lag V1**\t\t\t» **ESP Health**\n' +
+        '» **Fake Lag V2**\t\t\t» **ESP Bones**\n' +
+        '» **Fake Lag V2.1**\t\t» **SP Distance**\n' +
+        '» **Ghost Mode**\t\t\t» **Line of Approach**\n' +
+        '» **ESP Line**\t\t\t\t» **Stream Mode**\n' +
+        '» **ESP Box**\t\t\t\t\t» **Aimbot Neck**\n' +
+        '» **ESP Racha**\t\t\t\t» **Scope x2 – x4**\n' +
+        '» **ESP Estrellas / Pts**\t» **Sniper Scope**\n' +
+        '» **ESP Name**\n\n' +
+        'Abre un ticket y recibe atención personalizada por parte de nuestro equipo\n\n' +
+        '# 🔗 · tickets',
+      image: BANNER_URL,
+      footer: { text: 'Copyright © 2026 | x$', iconURL: LOGO_URL },
+    },
+    dripclient: {
+      color: 0x7b00ff,
+      title: '<:xslogo:1559619455406055434>  **DRIP CLIENT x$**',
+      description:
+        '» **Ghost Hack**\t\t\t» **ESP Health**\n' +
+        '» **Speed Hack**\t\t\t» **ESP Bones**\n' +
+        '» **Wall Hack**\t\t\t\t» **ESP MGE**\n' +
+        '» **Teleport (8m)**\t\t» **Aimbot Legit**\n' +
+        '» **ESP Line**\t\t\t\t» **Aimbot Rage**\n' +
+        '» **ESP Box**\t\t\t\t\t» **Aimbot Neck**\n' +
+        '» **ESP RGB**\n' +
+        '» **ESP Weapons**\n' +
+        '» **ESP Name**\n\n' +
+        'Abre un ticket y recibe atención personalizada por parte de nuestro equipo\n\n' +
+        '# 🔗 · tickets',
+      image: BANNER_URL,
+      footer: { text: 'Copyright © 2026 | x$', iconURL: LOGO_URL },
+    },
+  };
+
+  function getEmbedTemplates() {
+    return JSON.parse(JSON.stringify(embedTemplates));
   }
 
-  function ticketComponents() {
-    return [
-      new ActionRowBuilder().addComponents(
+  function updateEmbedTemplate(type, data) {
+    if (!embedTemplates[type]) return { ok: false, message: 'Tipo de embed no encontrado.' };
+    if (data.title !== undefined) embedTemplates[type].title = String(data.title).slice(0, 256);
+    if (data.description !== undefined) embedTemplates[type].description = String(data.description).slice(0, 4096);
+    if (data.color !== undefined) embedTemplates[type].color = data.color;
+    if (data.image !== undefined) embedTemplates[type].image = data.image || null;
+    if (data.thumbnail !== undefined) embedTemplates[type].thumbnail = data.thumbnail || null;
+    if (data.footer !== undefined) {
+      embedTemplates[type].footer = {
+        text: String(data.footer.text || '').slice(0, 2048),
+        iconURL: data.footer.iconURL || null,
+      };
+    }
+    if (data.author !== undefined) {
+      embedTemplates[type].author = data.author
+        ? { name: String(data.author.name || '').slice(0, 256), iconURL: data.author.iconURL || null }
+        : null;
+    }
+    writeAudit('success', `Embed «${type}» actualizado desde el panel.`);
+    return { ok: true, message: `Embed «${type}» actualizado.`, template: JSON.parse(JSON.stringify(embedTemplates[type])) };
+  }
+
+  function buildEmbed(type) {
+    const tpl = embedTemplates[type];
+    if (!tpl) return null;
+    const embed = new EmbedBuilder().setColor(tpl.color).setTimestamp();
+    if (tpl.author) embed.setAuthor({ name: tpl.author.name, iconURL: tpl.author.iconURL || undefined });
+    if (tpl.title) embed.setTitle(tpl.title);
+    if (tpl.description) embed.setDescription(tpl.description);
+    if (tpl.thumbnail) embed.setThumbnail(tpl.thumbnail);
+    if (tpl.image) embed.setImage(tpl.image);
+    if (tpl.footer) embed.setFooter({ text: tpl.footer.text, iconURL: tpl.footer.iconURL || undefined });
+    return embed;
+  }
+
+  function ticketComponents(type) {
+    const tpl = embedTemplates[type || 'tickets'];
+    if (!tpl?.buttons?.length) {
+      // Default: un solo botón verde
+      return [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('ticket:create')
+            .setLabel('Abrir ticket')
+            .setEmoji('🎫')
+            .setStyle(ButtonStyle.Success),
+        ),
+      ];
+    }
+    const styleMap = { Primary: ButtonStyle.Primary, Secondary: ButtonStyle.Secondary, Success: ButtonStyle.Success, Danger: ButtonStyle.Danger };
+    const row = new ActionRowBuilder();
+    for (const btn of tpl.buttons.slice(0, 5)) {
+      row.addComponents(
         new ButtonBuilder()
-          .setCustomId('ticket:create')
-          .setLabel('Abrir ticket')
-          .setEmoji('🎫')
-          .setStyle(ButtonStyle.Success),
-      ),
-    ];
+          .setCustomId(btn.id || 'ticket:create')
+          .setLabel(btn.label || 'Ticket')
+          .setEmoji(btn.emoji || '🎫')
+          .setStyle(styleMap[btn.style] || ButtonStyle.Primary),
+      );
+    }
+    return [row];
   }
 
   async function sendPredefinedEmbed(type, channelId) {
@@ -265,12 +369,13 @@ function createBot() {
       return { ok: false, message: 'Selecciona un canal de texto válido.' };
     }
 
-    await channel.send({ embeds: [embed], components: type === 'tickets' ? ticketComponents() : [] });
+    const hasButtons = embedTemplates[type]?.buttons?.length > 0 || type === 'tickets';
+    await channel.send({ embeds: [embed], components: hasButtons ? ticketComponents(type) : [] });
     writeAudit('success', `Embed «${type}» enviado a #${channel.name}.`);
     return { ok: true, message: `Embed enviado a #${channel.name}.` };
   }
 
-  async function sendCustomEmbed({ channelId, title, description, color, footer }) {
+  async function sendCustomEmbed({ channelId, title, description, color, footer, footerIcon, image, thumbnail }) {
     const guild = getGuild();
     if (!guild) return { ok: false, message: 'El bot aún no está conectado al servidor configurado.' };
     const channel = guild.channels.cache.get(channelId);
@@ -283,7 +388,13 @@ function createBot() {
       .setTimestamp();
     if (title) embed.setTitle(title);
     if (description) embed.setDescription(description);
-    if (footer) embed.setFooter({ text: footer });
+    if (footer) {
+      const footerObj = { text: footer };
+      if (footerIcon) footerObj.iconURL = footerIcon;
+      embed.setFooter(footerObj);
+    }
+    if (image) embed.setImage(image);
+    if (thumbnail) embed.setThumbnail(thumbnail);
 
     await channel.send({ embeds: [embed] });
     writeAudit('success', `Embed personalizado enviado a #${channel.name}.`);
@@ -452,10 +563,10 @@ function createBot() {
     if (!config.token || !config.guildId || !client.user) return;
     const commands = [
       { name: 'tickets', description: 'Enviar el panel de tickets' },
-      { name: 'diamantes', description: 'Enviar el embed de diamantes' },
-      { name: 'boosts', description: 'Enviar el embed de boosts' },
-      { name: 'decoraciones', description: 'Enviar el embed de decoraciones' },
-      { name: 'metodos', description: 'Enviar el embed de métodos de pago' },
+      { name: 'boosts', description: 'Enviar el embed de beneficios por boosts' },
+      { name: 'panelpremium', description: 'Enviar el embed del Panel Premium' },
+      { name: 'panelbasico', description: 'Enviar el embed del Panel Básico' },
+      { name: 'dripclient', description: 'Enviar el embed de Drip Client' },
       { name: 'ping', description: 'Mostrar la latencia del bot' },
       { name: 'cerrarticket', description: 'Cerrar el ticket actual' },
     ];
@@ -482,7 +593,7 @@ function createBot() {
   client.on('interactionCreate', async (interaction) => {
     try {
       if (interaction.isButton()) {
-        if (interaction.customId === 'ticket:create') return createTicket(interaction);
+        if (interaction.customId === 'ticket:create' || interaction.customId === 'ticket:buy' || interaction.customId === 'ticket:support' || interaction.customId === 'ticket:question') return createTicket(interaction);
         if (interaction.customId === 'ticket:close') {
           const ownerId = getTicketOwnerFromChannel(interaction.channel);
           if (interaction.user.id !== ownerId && !isStaff(interaction.member)) {
@@ -496,9 +607,10 @@ function createBot() {
 
       if (!interaction.isChatInputCommand()) return;
       const command = interaction.commandName;
-      if (['tickets', 'diamantes', 'boosts', 'decoraciones', 'metodos'].includes(command)) {
+      if (['tickets', 'boosts', 'panelpremium', 'panelbasico', 'dripclient'].includes(command)) {
         const embed = buildEmbed(command);
-        return interaction.reply({ embeds: [embed], components: command === 'tickets' ? ticketComponents() : [] });
+        const hasButtons = embedTemplates[command]?.buttons?.length > 0 || command === 'tickets';
+        return interaction.reply({ embeds: [embed], components: hasButtons ? ticketComponents(command) : [] });
       }
       if (command === 'ping') {
         return interaction.reply({ content: `🏓 Pong: \`${Math.round(client.ws.ping)}ms\``, ephemeral: true });
@@ -627,6 +739,8 @@ function createBot() {
     getLogs,
     clearLogs,
     getTickets,
+    getEmbedTemplates,
+    updateEmbedTemplate,
     sendPredefinedEmbed,
     sendCustomEmbed,
     closeTicket,

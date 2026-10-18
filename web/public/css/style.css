@@ -326,3 +326,16 @@ code { padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; colo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* Discord embed preview — enhanced layout with images */
+.discord-preview__body { display: flex; gap: 14px; }
+.discord-preview__content { flex: 1; min-width: 0; }
+.discord-preview__thumb { width: 80px; height: 80px; flex: 0 0 80px; border-radius: 6px; object-fit: cover; }
+.discord-preview__image { width: 100%; max-height: 300px; border-radius: 6px; object-fit: cover; margin-top: 10px; }
+.discord-preview__footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06); }
+.discord-preview__footer-icon { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+
+/* field hint */
+.field-hint { margin: 0 0 4px; color: var(--muted); font-size: .7rem; line-height: 1.5; }
+.field-hint code { font-size: .62rem; }

@@ -232,11 +232,32 @@
     const title = $('[data-composer-title]')?.value.trim() || 'Título del anuncio';
     const description = $('[data-composer-description]')?.value.trim() || 'La descripción aparecerá aquí cuando escribas tu mensaje.';
     const footer = $('[data-composer-footer]')?.value.trim() || 'X$ · Panel';
+    const footerIcon = $('[data-composer-footer-icon]')?.value.trim() || '';
+    const thumbnail = $('[data-composer-thumbnail]')?.value.trim() || '';
+    const image = $('[data-composer-image]')?.value.trim() || '';
     const color = $('[data-composer-color]')?.value.trim();
-    $('[data-preview-title]').textContent = title;
-    $('[data-preview-description]').textContent = description;
-    $('[data-preview-footer]').textContent = footer;
-    if (/^#?[0-9a-fA-F]{6}$/.test(color || '')) $('[data-preview-color]').style.backgroundColor = color.startsWith('#') ? color : `#${color}`;
+
+    const ptitle = $('[data-preview-title]');
+    const pdesc = $('[data-preview-description]');
+    const pfooter = $('[data-preview-footer]');
+    if (ptitle) ptitle.textContent = title;
+    if (pdesc) pdesc.textContent = description;
+    if (pfooter) pfooter.textContent = footer;
+
+    if (/^#?[0-9a-fA-F]{6}$/.test(color || '')) {
+      const bar = $('[data-preview-color]');
+      if (bar) bar.style.backgroundColor = color.startsWith('#') ? color : `#${color}`;
+    }
+
+    // Footer icon
+    const pfi = $('[data-preview-footer-icon]');
+    if (pfi) { pfi.src = footerIcon; pfi.style.display = footerIcon ? '' : 'none'; }
+    // Thumbnail
+    const pthumb = $('[data-preview-thumbnail]');
+    if (pthumb) { pthumb.src = thumbnail; pthumb.style.display = thumbnail ? '' : 'none'; }
+    // Image
+    const pimg = $('[data-preview-image]');
+    if (pimg) { pimg.src = image; pimg.style.display = image ? '' : 'none'; }
   }
 
   function bindEvents() {
@@ -281,6 +302,9 @@
             description: $('[data-composer-description]').value,
             color: $('[data-composer-color]').value,
             footer: $('[data-composer-footer]').value,
+            footerIcon: $('[data-composer-footer-icon]')?.value || '',
+            image: $('[data-composer-image]')?.value || '',
+            thumbnail: $('[data-composer-thumbnail]')?.value || '',
           }),
         });
         toast(response.message);
@@ -291,7 +315,7 @@
         submit.disabled = false;
       }
     });
-    $$('[data-composer-title], [data-composer-description], [data-composer-footer], [data-composer-color]').forEach((input) => input.addEventListener('input', syncPreview));
+    $$('[data-composer-title], [data-composer-description], [data-composer-footer], [data-composer-color], [data-composer-footer-icon], [data-composer-thumbnail], [data-composer-image]').forEach((input) => input.addEventListener('input', syncPreview));
 
     $$('[data-security]').forEach((toggle) => toggle.addEventListener('change', async () => {
       toggle.disabled = true;
@@ -351,6 +375,73 @@
 
     $('[data-refresh-tickets]')?.addEventListener('click', refreshTickets);
     $('[data-refresh-logs]')?.addEventListener('click', refreshLogs);
+
+    // ─── Template editor ─────────────────────────────────────
+    let tplCache = {};
+
+    async function loadTemplates() {
+      try {
+        const res = await api('/api/embed/templates');
+        tplCache = res.templates || {};
+      } catch { /* ignore */ }
+    }
+
+    function fillTplEditor(type) {
+      const tpl = tplCache[type];
+      if (!tpl) return;
+      const v = (sel) => $(sel);
+      v('[data-tpl-title]').value = tpl.title || '';
+      v('[data-tpl-desc]').value = tpl.description || '';
+      v('[data-tpl-color]').value = '#' + (tpl.color || 0x2b2d31).toString(16).padStart(6, '0');
+      v('[data-tpl-footer]').value = tpl.footer?.text || '';
+      v('[data-tpl-footer-icon]').value = tpl.footer?.iconURL || '';
+      v('[data-tpl-thumbnail]').value = tpl.thumbnail || '';
+      v('[data-tpl-image]').value = tpl.image || '';
+    }
+
+    $('[data-tpl-select]')?.addEventListener('change', (e) => {
+      if (e.target.value) fillTplEditor(e.target.value);
+    });
+
+    $('[data-tpl-save]')?.addEventListener('click', async () => {
+      const type = $('[data-tpl-select]')?.value;
+      if (!type) return toast('Selecciona un embed primero.', 'error');
+      try {
+        const body = {
+          title: $('[data-tpl-title]').value,
+          description: $('[data-tpl-desc]').value,
+          color: $('[data-tpl-color]').value,
+          thumbnail: $('[data-tpl-thumbnail]').value || null,
+          image: $('[data-tpl-image]').value || null,
+          footer: {
+            text: $('[data-tpl-footer]').value,
+            iconURL: $('[data-tpl-footer-icon]').value || null,
+          },
+        };
+        const res = await api(`/api/embed/templates/${encodeURIComponent(type)}`, {
+          method: 'PUT', body: JSON.stringify(body),
+        });
+        toast(res.message);
+        if (res.template) tplCache[type] = res.template;
+        await refreshLogs();
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    });
+
+    $('[data-tpl-reset]')?.addEventListener('click', async () => {
+      await loadTemplates();
+      const type = $('[data-tpl-select]')?.value;
+      if (type) fillTplEditor(type);
+      toast('Datos recargados del servidor.');
+    });
+
+    // Load templates on init
+    loadTemplates().then(() => {
+      const sel = $('[data-tpl-select]');
+      if (sel?.value) fillTplEditor(sel.value);
+    });
+
     $('[data-clear-logs]')?.addEventListener('click', async () => {
       if (!window.confirm('¿Limpiar el registro de actividad de esta sesión?')) return;
       try {

@@ -118,27 +118,44 @@
 
       <!-- Embeds predefinidos -->
       <section class="panel-section" data-section="embeds" id="embeds">
-        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Mensajes y embeds</h1><p>Envía paneles predefinidos a cualquier canal de texto.</p></div></div>
+        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Mensajes y embeds</h1><p>Envía o edita los paneles predefinidos del servidor.</p></div></div>
         <article class="surface-card">
           <label class="field field--wide"><span>Canal de destino</span><select data-embed-channel><option value="">Selecciona un canal de texto</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
           <div class="template-grid">
-            <button class="template-card" type="button" data-send-template="tickets"><span>🎫</span><b>Panel de tickets</b><small>Soporte privado con botón</small></button>
-            <button class="template-card" type="button" data-send-template="diamantes"><span>💎</span><b>Diamantes</b><small>Catálogo y soporte</small></button>
-            <button class="template-card" type="button" data-send-template="boosts"><span>🚀</span><b>Boosts</b><small>Planes para servidor</small></button>
-            <button class="template-card" type="button" data-send-template="decoraciones"><span>🎨</span><b>Decoraciones</b><small>Opciones de perfil</small></button>
-            <button class="template-card" type="button" data-send-template="metodos"><span>💳</span><b>Métodos de pago</b><small>Información segura</small></button>
+            <button class="template-card" type="button" data-send-template="tickets"><span>🎫</span><b>Tickets</b><small>Panel de soporte con botones</small></button>
+            <button class="template-card" type="button" data-send-template="boosts"><span>🚀</span><b>Beneficios</b><small>Boosts y premios</small></button>
+            <button class="template-card" type="button" data-send-template="panelpremium"><span>💎</span><b>Panel Premium</b><small>Catálogo completo</small></button>
+            <button class="template-card" type="button" data-send-template="panelbasico"><span>📦</span><b>Panel Básico</b><small>Funciones básicas</small></button>
+            <button class="template-card" type="button" data-send-template="dripclient"><span>🟣</span><b>Drip Client</b><small>Client exclusivo</small></button>
+          </div>
+        </article>
+
+        <!-- Editor de embeds predefinidos -->
+        <article class="surface-card" style="margin-top:16px">
+          <div class="surface-card__head"><div><span class="eyebrow">EDITOR</span><h2>Editar embed predefinido</h2></div></div>
+          <p class="field-hint">Selecciona un embed, modifica campos y guarda. Los emojis de servidor (<code>&lt;a:nombre:id&gt;</code>) funcionan en título y descripción.</p>
+          <div style="display:grid;gap:14px;margin-top:14px;">
+            <label class="field"><span>Embed a editar</span><select data-tpl-select><option value="">— Seleccionar —</option><option value="tickets">🎫 Tickets</option><option value="boosts">🚀 Beneficios</option><option value="panelpremium">💎 Panel Premium</option><option value="panelbasico">📦 Panel Básico</option><option value="dripclient">🟣 Drip Client</option></select></label>
+            <label class="field"><span>Título</span><input data-tpl-title maxlength="256" placeholder="Título del embed — soporta emojis <a:name:id>"></label>
+            <label class="field"><span>Descripción</span><textarea data-tpl-desc maxlength="4096" rows="8" placeholder="Contenido del embed — soporta emojis de servidor, markdown, \n para saltos"></textarea></label>
+            <div class="form-row"><label class="field"><span>Color hex</span><input data-tpl-color maxlength="7" placeholder="#2b2d31"></label><label class="field"><span>Footer texto</span><input data-tpl-footer maxlength="2048" placeholder="Copyright © 2026 | x$"></label></div>
+            <div class="form-row"><label class="field"><span>Footer icono URL</span><input data-tpl-footer-icon maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label><label class="field"><span>Thumbnail URL</span><input data-tpl-thumbnail maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label></div>
+            <label class="field"><span>Imagen grande URL</span><input data-tpl-image maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label>
+            <div class="button-row"><button class="button button--primary" type="button" data-tpl-save>💾 Guardar cambios</button><button class="button button--ghost" type="button" data-tpl-reset>↺ Recargar original</button></div>
           </div>
         </article>
       </section>
 
-      <!-- Editor -->
+      <!-- Editor personalizado -->
       <section class="panel-section" data-section="composer" id="composer">
-        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor personalizado</h1><p>Previsualiza un embed antes de enviarlo a Discord.</p></div></div>
+        <div class="section-head"><div><span class="eyebrow">COMUNICACIÓN</span><h1>Editor personalizado</h1><p>Crea un embed desde cero con emojis de servidor, imágenes y footer personalizado.</p></div></div>
         <div class="two-column">
           <form class="surface-card stack-form" data-composer-form>
-            <label class="field"><span>Título</span><input data-composer-title maxlength="256" placeholder="Título del anuncio"></label>
-            <label class="field"><span>Descripción</span><textarea data-composer-description maxlength="4096" rows="6" placeholder="Escribe el contenido que verá tu comunidad…"></textarea></label>
-            <div class="form-row"><label class="field"><span>Color</span><input data-composer-color value="#00ff88" maxlength="7" placeholder="#00ff88"></label><label class="field"><span>Footer</span><input data-composer-footer maxlength="2048" placeholder="X$ · Panel"></label></div>
+            <label class="field"><span>Título</span><input data-composer-title maxlength="256" placeholder="Título — soporta <a:emoji:id>"></label>
+            <label class="field"><span>Descripción</span><textarea data-composer-description maxlength="4096" rows="6" placeholder="Escribe el contenido…&#10;Usa <a:nombre:id> para emojis animados de servidor&#10;Usa <:nombre:id> para emojis estáticos"></textarea></label>
+            <div class="form-row"><label class="field"><span>Color</span><input data-composer-color value="#00ff88" maxlength="7" placeholder="#00ff88"></label><label class="field"><span>Footer</span><input data-composer-footer maxlength="2048" placeholder="Copyright © 2026 | x$"></label></div>
+            <div class="form-row"><label class="field"><span>Footer icono URL</span><input data-composer-footer-icon maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label><label class="field"><span>Thumbnail URL</span><input data-composer-thumbnail maxlength="2048" placeholder="https://..."></label></div>
+            <label class="field"><span>Imagen grande URL</span><input data-composer-image maxlength="2048" placeholder="https://cdn.discordapp.com/..."></label>
             <label class="field"><span>Canal de destino</span><select data-composer-channel required><option value="">Selecciona un canal</option><% overview.textChannels.forEach((channel) => { %><option value="<%= channel.id %>"># <%= channel.name %></option><% }) %></select></label>
             <button class="button button--primary" type="submit">Enviar embed personalizado <span>→</span></button>
           </form>
@@ -146,7 +163,18 @@
             <div class="surface-card__head"><div><span class="eyebrow">VISTA PREVIA</span><h2>Así se verá</h2></div></div>
             <article class="discord-preview" data-composer-preview>
               <div class="discord-preview__bar" data-preview-color></div>
-              <div class="discord-preview__content"><strong data-preview-title>Título del anuncio</strong><p data-preview-description>La descripción aparecerá aquí cuando escribas tu mensaje.</p><small data-preview-footer>X$ · Panel</small></div>
+              <div class="discord-preview__body">
+                <div class="discord-preview__content">
+                  <strong data-preview-title>Título del anuncio</strong>
+                  <p data-preview-description>La descripción aparecerá aquí cuando escribas tu mensaje.</p>
+                </div>
+                <img class="discord-preview__thumb" data-preview-thumbnail alt="" style="display:none">
+              </div>
+              <img class="discord-preview__image" data-preview-image alt="" style="display:none">
+              <div class="discord-preview__footer">
+                <img class="discord-preview__footer-icon" data-preview-footer-icon alt="" style="display:none">
+                <small data-preview-footer>X$ · Panel</small>
+              </div>
             </article>
           </aside>
         </div>

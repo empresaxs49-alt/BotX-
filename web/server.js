@@ -45,7 +45,7 @@ function createWebApp(bot) {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none';",
+      "default-src 'self'; img-src 'self' data: https://cdn.discordapp.com https://media.discordapp.net https://*.discord.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none';",
     );
     next();
   });
@@ -202,10 +202,29 @@ function createWebApp(bot) {
     res.status(result.ok ? 200 : 400).json(result);
   }));
 
+  // ─── API: Embed templates (listar, editar) ──────────────────
+  app.get('/api/embed/templates', requireAuth, (req, res) => {
+    res.json({ ok: true, templates: bot.getEmbedTemplates() });
+  });
+
+  app.put('/api/embed/templates/:type', requireAuth, requireSameOrigin, (req, res) => {
+    const type = req.params.type;
+    const data = req.body || {};
+    // Parse color if hex string
+    if (typeof data.color === 'string' && /^#?[0-9a-fA-F]{6}$/.test(data.color.trim())) {
+      data.color = Number.parseInt(data.color.trim().replace('#', ''), 16);
+    }
+    const result = bot.updateEmbedTemplate(type, data);
+    res.status(result.ok ? 200 : 400).json(result);
+  });
+
   app.post('/api/embed/custom', requireAuth, requireSameOrigin, asyncRoute(async (req, res) => {
     const title = String(req.body.title || '').trim().slice(0, 256);
     const description = String(req.body.description || '').trim().slice(0, 4_096);
     const footer = String(req.body.footer || '').trim().slice(0, 2_048);
+    const footerIcon = String(req.body.footerIcon || '').trim().slice(0, 2_048) || undefined;
+    const image = String(req.body.image || '').trim().slice(0, 2_048) || undefined;
+    const thumbnail = String(req.body.thumbnail || '').trim().slice(0, 2_048) || undefined;
     const rawColor = String(req.body.color || '#00ff88').trim();
     if (!title && !description) return res.status(400).json({ ok: false, message: 'Agrega al menos un título o una descripción.' });
     if (!isValidHexColor(rawColor)) return res.status(400).json({ ok: false, message: 'El color debe ser hexadecimal, por ejemplo #00ff88.' });
@@ -215,6 +234,9 @@ function createWebApp(bot) {
       title,
       description,
       footer,
+      footerIcon,
+      image,
+      thumbnail,
       color: Number.parseInt(rawColor.replace('#', ''), 16),
     });
     res.status(result.ok ? 200 : 400).json(result);
