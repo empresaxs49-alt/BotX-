@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>X$ | Login</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="login-page">
+
+  <div class="login-container">
+    <div class="login-logo">
+      <img src="/assets/logo.gif" alt="X$ Logo" class="logo-gif"/>
+    </div>
+    <div class="login-banner">
+      <img src="/assets/banner.gif" alt="X$ Banner" class="banner-gif"/>
+    </div>
+
+    <div class="login-box">
+      <h1 class="login-title">⚡ X$ Panel</h1>
+      <p class="login-sub">Control Center</p>
+
+      <% if (error) { %>
+        <div class="alert-error">⚠️ <%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/login" class="login-form">
+        <div class="input-group">
+          <label>👤 Usuario</label>
+          <input type="text" name="username" placeholder="Usuario" required autocomplete="off"/>
+        </div>
+        <div class="input-group">
+          <label>🔒 Contraseña</label>
+          <input type="password" name="password" placeholder="Contraseña" required/>
+        </div>
+        <button type="submit" class="btn-login">Entrar al Panel →</button>
+      </form>
+
+      <p class="login-footer">X$ | Lo mejor en venta de cheats 🔥</p>
+    </div>
+  </div>
+
+</body>
+</html>

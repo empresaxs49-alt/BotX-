@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>X$ | Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="dashboard-page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/assets/logo.gif" alt="Logo" class="sidebar-gif"/>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#status"   class="nav-link active">📊 Estado</a>
+      <a href="#embeds"   class="nav-link">📨 Embeds</a>
+      <a href="#voice"    class="nav-link">🔊 Voz</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="sidebar-user">👤 <%= user %></span>
+      <a href="/logout" class="btn-logout">Salir</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="topbar">
+      <div class="topbar-banner">
+        <img src="/assets/banner.gif" alt="Banner" class="topbar-gif"/>
+      </div>
+      <h1 class="topbar-title">⚡ X$ Control Panel</h1>
+    </header>
+
+    <!-- FLASH -->
+    <div id="flash-msg" class="flash-msg" style="display:none"></div>
+
+    <!-- ═══ STATUS ═══════════════════════════════════════ -->
+    <section id="status" class="card">
+      <h2 class="card-title">📊 Estado del Bot</h2>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="stat-icon">🤖</span>
+          <span class="stat-label">Bot</span>
+          <span class="stat-value" id="bot-tag"><%= botTag %></span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon"><%= botStatus === 'online' ? '🟢' : '🔴' %></span>
+          <span class="stat-label">Estado</span>
+          <span class="stat-value" id="bot-status"><%= botStatus === 'online' ? 'Online' : 'Offline' %></span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon">📡</span>
+          <span class="stat-label">Ping</span>
+          <span class="stat-value" id="bot-ping"><%= botPing %>ms</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon">👥</span>
+          <span class="stat-label">Miembros</span>
+          <span class="stat-value"><%= memberCount %></span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon">🏠</span>
+          <span class="stat-label">Servidor</span>
+          <span class="stat-value"><%= guildName %></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ EMBEDS ════════════════════════════════════════ -->
+    <section id="embeds" class="card">
+      <h2 class="card-title">📨 Enviar Embeds</h2>
+      <p class="card-sub">Selecciona el canal y el tipo de embed a enviar.</p>
+
+      <div class="embed-controls">
+        <select id="embed-channel" class="select-dark">
+          <option value="">— Seleccionar canal de texto —</option>
+          <% textChannels.forEach(ch => { %>
+            <option value="<%= ch.id %>">#<%= ch.name %></option>
+          <% }) %>
+        </select>
+
+        <div class="embed-buttons">
+          <button class="btn-embed" onclick="sendEmbed('tickets')">🎫 Tickets</button>
+          <button class="btn-embed" onclick="sendEmbed('diamantes')">💎 Diamantes</button>
+          <button class="btn-embed" onclick="sendEmbed('boosts')">🚀 Boosts</button>
+          <button class="btn-embed" onclick="sendEmbed('decoraciones')">🎨 Decoraciones</button>
+          <button class="btn-embed" onclick="sendEmbed('metodos')">💳 Métodos de Pago</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ VOZ ═══════════════════════════════════════════ -->
+    <section id="voice" class="card">
+      <h2 class="card-title">🔊 Control de Voz</h2>
+      <p class="card-sub">Conecta o desconecta el bot de un canal de voz.</p>
+
+      <div class="voice-controls">
+        <select id="voice-channel" class="select-dark">
+          <option value="">— Seleccionar canal de voz —</option>
+          <% voiceChannels.forEach(ch => { %>
+            <option value="<%= ch.id %>">🔊 <%= ch.name %></option>
+          <% }) %>
+        </select>
+
+        <div class="voice-buttons">
+          <button class="btn-connect" onclick="connectVoice()">🔊 Conectar</button>
+          <button class="btn-disconnect" onclick="disconnectVoice()">🔇 Desconectar</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ─── Flash ──────────────────────────────────────────
+    function showFlash(msg, ok) {
+      const el = document.getElementById('flash-msg');
+      el.textContent = msg;
+      el.className = 'flash-msg ' + (ok ? 'flash-ok' : 'flash-err');
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    // ─── Embeds ─────────────────────────────────────────
+    async function sendEmbed(type) {
+      const channelId = document.getElementById('embed-channel').value;
+      if (!channelId) return showFlash('⚠️ Selecciona un canal primero', false);
+      const r = await fetch('/api/embed/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, channelId }),
+      });
+      const d = await r.json();
+      showFlash(d.msg, d.ok);
+    }
+
+    // ─── Voz ────────────────────────────────────────────
+    async function connectVoice() {
+      const channelId = document.getElementById('voice-channel').value;
+      if (!channelId) return showFlash('⚠️ Selecciona un canal de voz', false);
+      const r = await fetch('/api/voice/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId }),
+      });
+      const d = await r.json();
+      showFlash(d.msg, d.ok);
+    }
+
+    async function disconnectVoice() {
+      const r = await fetch('/api/voice/disconnect', { method: 'POST' });
+      const d = await r.json();
+      showFlash(d.msg, d.ok);
+    }
+
+    // ─── Auto-refresh status ────────────────────────────
+    setInterval(async () => {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        document.getElementById('bot-ping').textContent   = d.ping + 'ms';
+        document.getElementById('bot-status').textContent = d.online ? 'Online' : 'Offline';
+        document.getElementById('bot-tag').textContent    = d.tag;
+      } catch {}
+    }, 10000);
+
+    // Sidebar active link
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+  </script>
+
+</body>
+</html>
